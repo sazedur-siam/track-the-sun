@@ -30,6 +30,10 @@ export default function HomeScreen() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [showNameInput, setShowNameInput] = useState(false);
 
+  const handleDepartureTimeChange = (time: Date) => {
+    setDepartureTime(time);
+  };
+
   const canCalculate = fromLocation !== null && toLocation !== null && !isCalculating;
 
   const handleCalculate = async () => {
@@ -61,12 +65,11 @@ export default function HomeScreen() {
           departureTime: departureTime.toISOString(),
         },
       });
-    } catch (error) {
+    } catch {
       Alert.alert(
         'Error',
         'Failed to calculate route. Please check your internet connection and try again.'
       );
-      console.error('Route calculation error:', error);
     } finally {
       setIsCalculating(false);
     }
@@ -163,7 +166,7 @@ export default function HomeScreen() {
           <TimePicker
             label="Departure Time"
             selectedTime={departureTime}
-            onTimeChange={setDepartureTime}
+            onTimeChange={handleDepartureTimeChange}
           />
 
           {/* Save Favorite Button */}
