@@ -1,8 +1,10 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import CurrentLocationButton from '@/src/components/CurrentLocationButton';
+import FavoritesModal from '@/src/components/FavoritesModal';
 import LocationInput from '@/src/components/LocationInput';
 import TimePicker from '@/src/components/TimePicker';
+import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { fetchRoute } from '@/src/services/routingService';
 import { Location } from '@/src/types';
 import * as Haptics from 'expo-haptics';
@@ -24,6 +26,7 @@ export default function HomeScreen() {
   const [toLocation, setToLocation] = useState<Location | null>(null);
   const [departureTime, setDepartureTime] = useState(new Date());
   const [isCalculating, setIsCalculating] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
 
   const canCalculate = fromLocation !== null && toLocation !== null && !isCalculating;
 
@@ -74,6 +77,23 @@ export default function HomeScreen() {
     setToLocation(temp);
   };
 
+  const handleSaveFavorite = async () => {
+    if (!fromLocation || !toLocation) return;
+
+    try {
+      await saveFavoriteRoute(fromLocation, toLocation);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Saved', 'Route saved to favorites!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save favorite route.');
+    }
+  };
+
+  const handleLoadFavorite = (from: Location, to: Location) => {
+    setFromLocation(from);
+    setToLocation(to);
+  };
+
   return (
     <ThemedView style={styles.container}>
       <KeyboardAvoidingView
@@ -92,6 +112,12 @@ export default function HomeScreen() {
             <ThemedText style={styles.subtitle}>
               Find the sunny side of your journey
             </ThemedText>
+            <TouchableOpacity
+              style={styles.favoritesButton}
+              onPress={() => setShowFavorites(true)}
+            >
+              <ThemedText style={styles.favoritesButtonText}>⭐ Favorites</ThemedText>
+            </TouchableOpacity>
           </View>
 
           {/* Current Location Button */}
@@ -132,6 +158,16 @@ export default function HomeScreen() {
             onTimeChange={setDepartureTime}
           />
 
+          {/* Save Favorite Button */}
+          {fromLocation && toLocation && (
+            <TouchableOpacity
+              style={styles.saveFavoriteButton}
+              onPress={handleSaveFavorite}
+            >
+              <ThemedText style={styles.saveFavoriteText}>💾 Save as Favorite</ThemedText>
+            </TouchableOpacity>
+          )}
+
           {/* Calculate Button */}
           <TouchableOpacity
             style={[
@@ -169,7 +205,12 @@ export default function HomeScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </ThemedView>
+      {/* Favorites Modal */}
+      <FavoritesModal
+        visible={showFavorites}
+        onClose={() => setShowFavorites(false)}
+        onSelectFavorite={handleLoadFavorite}
+      />    </ThemedView>
   );
 }
 
@@ -197,6 +238,30 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     opacity: 0.7,
+    textAlign: 'center',
+  },
+  favoritesButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#FF9500',
+    borderRadius: 20,
+  },
+  favoritesButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  saveFavoriteButton: {
+    backgroundColor: '#FF9500',
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 16,
+  },
+  saveFavoriteText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
   },
   swapContainer: {

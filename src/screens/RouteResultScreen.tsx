@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AnimatedProgressCircle } from '@/src/components/AnimatedProgressCircle';
+import BusDiagram from '@/src/components/BusDiagram';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
 import { calculateSunExposure, SunExposureResult } from '@/src/services/sunCalcService';
 import * as Haptics from 'expo-haptics';
@@ -146,6 +147,17 @@ export default function RouteResultScreen() {
                 </View>
               )}
             </View>
+
+            {/* Bus Diagram */}
+            {sunData.hasDirectSunlight && (
+              <View style={styles.card}>
+                <BusDiagram
+                  eastPercentage={sunData.eastPercentage}
+                  westPercentage={sunData.westPercentage}
+                  recommendation={sunData.recommendation}
+                />
+              </View>
+            )}
 
             {/* Route Details */}
             <View style={styles.card}>

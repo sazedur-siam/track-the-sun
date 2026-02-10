@@ -165,11 +165,26 @@ Edge cases handled:
 
 ---
 
-### Phase 6 (Optional Enhancements)
-- Save favorite routes
-- Show sun position visually on a bus diagram
-- Haptic feedback on result
-- Widget for frequently traveled routes
+### Phase 6 (Optional Enhancements) ✅ COMPLETE
+- ✅ Save favorite routes
+- ✅ Show sun position visually on a bus diagram
+- ✅ Haptic feedback on result (completed in Phase 5)
+
+**Deliverable:** Enhanced features for power users
+
+**Implementation Notes:**
+- AsyncStorage for local persistent favorites storage
+- FavoritesModal component with clean list UI
+- Save/delete favorites with haptic feedback
+- Quick load of favorite routes from modal
+- "Favorites" button in header (orange star badge)
+- "Save as Favorite" button appears when both locations selected
+- BusDiagram component showing visual bus side view
+- Color-coded sun exposure intensity (East: orange, West: blue)
+- Visual recommendation with "✓ Sit here" badge on recommended side
+- Dynamic sun intensity based on exposure percentage
+- Legend explaining color coding
+- Clean, simple implementation without over-engineering
 
 ---
 
