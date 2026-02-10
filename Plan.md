@@ -83,7 +83,7 @@ Great choices! This keeps everything free and gives users real flexibility. Let 
 
 ---
 
-### Phase 3 — Sun Position Calculation Engine (Core Logic)
+### Phase 3 — Sun Position Calculation Engine (Core Logic) ✅ COMPLETE
 **Goal:** Calculate which side gets more sun across the entire route
 
 The algorithm per waypoint:
@@ -96,12 +96,20 @@ The algorithm per waypoint:
    - Weight each segment by its distance (longer segments matter more)
 5. **Aggregate** — East% vs West% across all waypoints
 
-Edge cases to handle:
-- Nighttime travel (sun below horizon) → show "No direct sunlight"
-- Dawn/dusk (very low sun angle) → note reduced intensity
-- North/South travel (sun roughly behind/ahead) → note "minimal side exposure"
+Edge cases handled:
+- ✅ Nighttime travel (sun below horizon) → show "No direct sunlight"
+- ✅ Dawn/dusk (very low sun angle) → note reduced intensity  
+- ✅ North/South travel (sun roughly behind/ahead) → note "minimal side exposure"
 
-**Deliverable:** A pure function: `calculateSunSplit(waypoints, departureTime) → { east: 70, west: 30, details[] }`
+**Deliverable:** A pure function: `calculateSunExposure(waypoints) → { eastPercentage, westPercentage, recommendation, summary }`
+
+**Implementation Notes:**
+- Clean algorithm using suncalc library
+- Distance-weighted calculation for accuracy
+- Handles all edge cases (nighttime, low sun, neutral exposure)
+- Clear recommendation: which side to sit on to avoid sun
+- Beautiful circular percentage display (East: orange, West: blue)
+- User-friendly summary messages
 
 ---
 
@@ -137,23 +145,9 @@ Edge cases to handle:
 - Save favorite routes
 - Show sun position visually on a bus diagram
 - Haptic feedback on result
-- Share result as image
 - Widget for frequently traveled routes
 
 ---
-
-### Estimated Timeline
-
-| Phase | Effort |
-|---|---|
-| Phase 0 — Setup | ~1 day |
-| Phase 1 — Location Input | ~2-3 days |
-| Phase 2 — Route Fetching | ~1-2 days |
-| Phase 3 — Sun Engine | ~2-3 days |
-| Phase 4 — Results UI | ~2 days |
-| Phase 5 — Polish | ~2-3 days |
-
-**Total: ~10-14 days** for a working polished app.
 
 ---
 
@@ -164,7 +158,3 @@ Edge cases to handle:
 | Nominatim rate limiting (1 req/sec) | Debounce input to 500ms+, cache results |
 | OSRM gives driving route not bus route | OSRM has no public transit mode — route will approximate the road path, which is close enough for sun angle calculation |
 | Sun calc accuracy | `suncalc` is well-tested and used widely — accuracy is excellent for this use case |
-
----
-
-Want me to start building **Phase 0 + Phase 1** now? Or would you like to adjust anything in the plan first?
