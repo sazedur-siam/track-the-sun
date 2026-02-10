@@ -16,7 +16,23 @@ export default function RouteResultScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   
   // Parse route data from params
-  const route: Route = params.route ? JSON.parse(params.route as string) : null;
+  let route: Route | null = null;
+  try {
+    if (params.route) {
+      const parsedRoute = JSON.parse(params.route as string);
+      // Restore Date objects from strings
+      if (parsedRoute.waypoints) {
+        parsedRoute.waypoints = parsedRoute.waypoints.map((wp: any) => ({
+          ...wp,
+          timestamp: new Date(wp.timestamp),
+        }));
+      }
+      route = parsedRoute;
+    }
+  } catch (e) {
+    console.error('Failed to parse route:', e);
+  }
+
   const fromName = params.fromName as string;
   const toName = params.toName as string;
   const departureTime = params.departureTime ? new Date(params.departureTime as string) : new Date();
@@ -198,9 +214,13 @@ export default function RouteResultScreen() {
                   <ThemedText style={styles.statValue}>
                     {formatDuration(route.duration)}
                   </ThemedText>
-                  <ThemedText style={styles.statLabel}>Duration</ThemedText>
+                  <ThemedText style={styles.statLabel}>Est. Duration*</ThemedText>
                 </View>
               </View>
+
+              <ThemedText style={styles.disclaimerText}>
+                *Duration is estimated based on typical speeds and does not account for real-time traffic conditions.
+              </ThemedText>
 
               <View style={styles.timeRow}>
                 <View style={styles.timeItem}>
@@ -374,6 +394,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.7,
     marginTop: 4,
+  },
+  disclaimerText: {
+    fontSize: 12,
+    opacity: 0.6,
+    textAlign: 'center',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    fontStyle: 'italic',
   },
   timeRow: {
     flexDirection: 'row',

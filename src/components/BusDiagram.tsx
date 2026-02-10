@@ -37,8 +37,8 @@ export default function BusDiagram({
               styles.westSide,
               {
                 backgroundColor: `rgba(92, 200, 250, ${westIntensity})`,
-                borderColor: recommendation === 'east' ? '#34C759' : 'transparent',
-                borderWidth: recommendation === 'east' ? 3 : 2,
+                borderColor: recommendation === 'west' ? '#34C759' : 'transparent',
+                borderWidth: recommendation === 'west' ? 3 : 2,
               },
             ]}
           >
@@ -48,7 +48,7 @@ export default function BusDiagram({
               </ThemedText>
             )}
           </View>
-          {recommendation === 'east' && (
+          {recommendation === 'west' && (
             <ThemedText style={styles.recommendBadge}>✓ Sit here</ThemedText>
           )}
         </View>
@@ -74,8 +74,8 @@ export default function BusDiagram({
               styles.eastSide,
               {
                 backgroundColor: `rgba(255, 149, 0, ${eastIntensity})`,
-                borderColor: recommendation === 'west' ? '#34C759' : 'transparent',
-                borderWidth: recommendation === 'west' ? 3 : 2,
+                borderColor: recommendation === 'east' ? '#34C759' : 'transparent',
+                borderWidth: recommendation === 'east' ? 3 : 2,
               },
             ]}
           >
@@ -85,7 +85,7 @@ export default function BusDiagram({
               </ThemedText>
             )}
           </View>
-          {recommendation === 'west' && (
+          {recommendation === 'east' && (
             <ThemedText style={styles.recommendBadge}>✓ Sit here</ThemedText>
           )}
         </View>

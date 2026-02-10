@@ -60,7 +60,7 @@ function decodePolyline(encoded: string): [number, number][] {
     const deltaLng = result & 1 ? ~(result >> 1) : result >> 1;
     lng += deltaLng;
 
-    coordinates.push([lat / 1e6, lng / 1e6]);
+    coordinates.push([lat / 1e5, lng / 1e5]);
   }
 
   return coordinates;
@@ -80,7 +80,7 @@ export async function fetchRoute(
 ): Promise<Route | null> {
   try {
     // Build OSRM request URL
-    const url = `${OSRM_BASE_URL}/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=polyline6`;
+    const url = `${OSRM_BASE_URL}/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=polyline`;
 
     const response = await fetch(url);
 
