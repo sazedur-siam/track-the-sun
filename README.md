@@ -1,8 +1,27 @@
-# Welcome to your Expo app 👋
+# ☀️ TrackTheSun (SunSide)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Which side of the bus should you sit on to avoid (or get) the sun?**
 
-## Get started
+TrackTheSun is a React Native mobile app that calculates which side of a bus/vehicle gets more sunlight during your journey, helping you choose the right seat for maximum comfort.
+
+## 🎯 Features
+
+- 🗺️ Search and select origin/destination locations
+- 🧭 Calculate route with real-time sun position analysis
+- 📊 Visual breakdown of sun exposure (East vs West side)
+- 🌅 Accounts for time of day and seasonal sun position
+- 🆓 100% free - no API keys required
+
+## 🛠️ Tech Stack
+
+- **Framework**: React Native (Expo)
+- **Routing**: OSRM (free routing API)
+- **Geocoding**: Nominatim/OpenStreetMap
+- **Sun Calculations**: `suncalc` library
+- **Maps**: `react-native-maps` + OpenStreetMap
+- **Navigation**: `expo-router`
+
+## 📦 Installation
 
 1. Install dependencies
 
@@ -13,38 +32,96 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 2. Start the app
 
    ```bash
-   npx expo start
+   npm start
    ```
 
-In the output, you'll find options to open the app in a
+3. Run on your platform:
+   - Press `i` for iOS simulator
+   - Press `a` for Android emulator
+   - Scan QR code with Expo Go app
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🚀 Development Phases
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### ✅ Phase 0 - Project Setup (COMPLETE)
+- [x] Initialize Expo project
+- [x] Set up folder structure (`src/components`, `src/screens`, `src/services`, etc.)
+- [x] Install core dependencies (suncalc, expo-location, react-native-maps)
+- [x] Create loading screen with smooth transition
+- [x] App launches on both iOS and Android
 
-## Get a fresh project
+### 🚧 Phase 1 - Location Input UI (Next)
+- [ ] Build main screen with location inputs
+- [ ] Integrate Nominatim autocomplete
+- [ ] Add "Use current location" feature
+- [ ] Departure time picker
+- [ ] Calculate button
 
-When you're ready, run:
+### 📋 Phase 2 - Route Fetching
+- [ ] OSRM API integration
+- [ ] Decode route polyline
+- [ ] Calculate waypoint timestamps
 
-```bash
-npm run reset-project
+### 📋 Phase 3 - Sun Calculation Engine
+- [ ] Calculate bus heading at each waypoint
+- [ ] Determine sun azimuth using suncalc
+- [ ] East/West side classification algorithm
+- [ ] Handle edge cases (night, dawn/dusk)
+
+### 📋 Phase 4 - Results Display
+- [ ] Animated percentage charts
+- [ ] Visual route map with color-coding
+- [ ] Recommendation card
+
+### 📋 Phase 5 - Polish & UX
+- [ ] Loading animations
+- [ ] Dark mode support
+- [ ] Error handling
+- [ ] App branding
+
+## 📁 Project Structure
+
+```
+TrackTheSun/
+├── app/                    # Expo Router screens
+│   ├── (tabs)/
+│   │   └── index.tsx      # Main entry point
+│   └── _layout.tsx
+├── src/                   # Source code
+│   ├── components/        # Reusable UI components
+│   ├── screens/          # Full screen components
+│   │   ├── LoadingScreen.tsx
+│   │   └── HomeScreen.tsx
+│   ├── services/         # Business logic
+│   │   ├── sunCalcService.ts
+│   │   ├── routingService.ts
+│   │   └── geocodingService.ts
+│   ├── utils/            # Helper functions
+│   ├── hooks/            # Custom React hooks
+│   ├── constants/        # App constants
+│   └── types.ts          # TypeScript interfaces
+├── assets/               # Images and fonts
+└── Plan.md              # Detailed implementation plan
+
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 🧪 Testing
 
-## Learn more
+The app has been tested to:
+- ✅ Launch successfully on iOS and Android
+- ✅ Display loading animation
+- ✅ Transition to home screen after 2 seconds
+- ✅ Support dark mode
 
-To learn more about developing your project with Expo, look at the following resources:
+## 📝 Next Steps
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Follow [Plan.md](./Plan.md) for detailed phase-by-phase implementation guide.
 
-## Join the community
+**Current Status**: Phase 0 Complete ✅ | Ready for Phase 1
 
-Join our community of developers creating universal apps.
+## 📄 License
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+This project is free and open source.
+
+---
+
+Built with ❤️ using Expo and React Native
