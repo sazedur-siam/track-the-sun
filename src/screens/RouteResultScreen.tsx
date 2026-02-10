@@ -1,15 +1,17 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { AnimatedProgressCircle } from '@/src/components/AnimatedProgressCircle';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
 import { calculateSunExposure, SunExposureResult } from '@/src/services/sunCalcService';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function RouteResultScreen() {
   const params = useLocalSearchParams();
   const [sunData, setSunData] = useState<SunExposureResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(true);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   
   // Parse route data from params
   const route: Route = params.route ? JSON.parse(params.route as string) : null;
@@ -25,9 +27,16 @@ export default function RouteResultScreen() {
         const result = calculateSunExposure(route.waypoints);
         setSunData(result);
         setIsCalculating(false);
+        // Fade in animation
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }).start();
       }, 500);
     }
-  }, [route]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.route]);
 
   if (!route) {
     return (
@@ -77,7 +86,7 @@ export default function RouteResultScreen() {
             </ThemedText>
           </View>
         ) : sunData ? (
-          <>
+          <Animated.View style={{ opacity: fadeAnim }}>
             {/* Sun Exposure Results */}
             <View style={styles.sunCard}>
               <ThemedText type="subtitle" style={styles.sunCardTitle}>
@@ -87,25 +96,21 @@ export default function RouteResultScreen() {
               {sunData.hasDirectSunlight ? (
                 <>
                   <View style={styles.percentageContainer}>
-                    <View style={styles.percentageItem}>
-                      <View style={[styles.percentageCircle, styles.eastCircle]}>
-                        <ThemedText style={styles.percentageValue}>
-                          {sunData.eastPercentage}%
-                        </ThemedText>
-                      </View>
-                      <ThemedText style={styles.percentageLabel}>East Side</ThemedText>
-                    </View>
+                    <AnimatedProgressCircle
+                      percentage={sunData.eastPercentage}
+                      color="#FF9500"
+                      label="East Side"
+                      delay={300}
+                    />
 
                     <ThemedText style={styles.percentageVs}>vs</ThemedText>
 
-                    <View style={styles.percentageItem}>
-                      <View style={[styles.percentageCircle, styles.westCircle]}>
-                        <ThemedText style={styles.percentageValue}>
-                          {sunData.westPercentage}%
-                        </ThemedText>
-                      </View>
-                      <ThemedText style={styles.percentageLabel}>West Side</ThemedText>
-                    </View>
+                    <AnimatedProgressCircle
+                      percentage={sunData.westPercentage}
+                      color="#5AC8FA"
+                      label="West Side"
+                      delay={500}
+                    />
                   </View>
 
                   {/* Recommendation */}
@@ -200,7 +205,7 @@ export default function RouteResultScreen() {
                 </View>
               </View>
             </View>
-          </>
+          </Animated.View>
         ) : null}
 
         {/* Back Button */}
@@ -263,33 +268,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     marginBottom: 24,
-  },
-  percentageItem: {
-    alignItems: 'center',
-  },
-  percentageCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  eastCircle: {
-    backgroundColor: '#FF9500',
-  },
-  westCircle: {
-    backgroundColor: '#5AC8FA',
-  },
-  percentageValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  percentageLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    opacity: 0.8,
   },
   percentageVs: {
     fontSize: 20,
