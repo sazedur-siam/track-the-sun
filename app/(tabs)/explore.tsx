@@ -1,112 +1,246 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { FavoriteRoute, deleteFavoriteRoute, getFavoriteRoutes } from '@/src/services/favoritesService';
+import { fetchRoute } from '@/src/services/routingService';
+import { useFocusEffect, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
-export default function TabTwoScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
+export default function SavedLocationsScreen() {
+  const [favorites, setFavorites] = useState<FavoriteRoute[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const router = useRouter();
+
+  const loadFavorites = async () => {
+    const data = await getFavoriteRoutes();
+    setFavorites(data);
+    setIsLoading(false);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadFavorites();
+    }, [])
+  );
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadFavorites();
+    setIsRefreshing(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    Alert.alert(
+      'Delete Favorite',
+      'Are you sure you want to remove this saved location?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteFavoriteRoute(id);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            loadFavorites();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCalculateRoute = async (favorite: FavoriteRoute) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    try {
+      const route = await fetchRoute(
+        favorite.fromLocation,
+        favorite.toLocation,
+        new Date()
+      );
+
+      if (!route) {
+        Alert.alert('Route Not Found', 'Unable to find a route for this saved location.');
+        return;
+      }
+
+      router.push({
+        pathname: '/route-result',
+        params: {
+          route: JSON.stringify(route),
+          fromName: favorite.fromLocation.name,
+          toName: favorite.toLocation.name,
+          departureTime: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to calculate route. Please try again.');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF9500" />
+          <ThemedText style={styles.loadingText}>Loading saved locations...</ThemedText>
+        </View>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
+    );
+  }
+
+  return (
+    <ThemedView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+        }
+      >
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            ⭐ Saved Locations
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {favorites.length} saved route{favorites.length !== 1 ? 's' : ''}
+          </ThemedText>
+        </View>
+
+        {favorites.length === 0 ? (
+          <View style={styles.emptyState}>
+            <ThemedText style={styles.emptyStateIcon}>📍</ThemedText>
+            <ThemedText style={styles.emptyStateText}>No saved locations yet</ThemedText>
+            <ThemedText style={styles.emptyStateSubtext}>
+              Save your frequent routes from the home screen for quick access
             </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+          </View>
+        ) : (
+          favorites.map((favorite) => (
+            <View key={favorite.id} style={styles.favoriteCard}>
+              <TouchableOpacity
+                style={styles.favoriteContent}
+                onPress={() => handleCalculateRoute(favorite)}
+              >
+                <ThemedText style={styles.favoriteName}>{favorite.name}</ThemedText>
+                <View style={styles.routeDetails}>
+                  <ThemedText style={styles.locationText} numberOfLines={1}>
+                    📍 {favorite.fromLocation.name}
+                  </ThemedText>
+                  <ThemedText style={styles.arrow}>↓</ThemedText>
+                  <ThemedText style={styles.locationText} numberOfLines={1}>
+                    📍 {favorite.toLocation.name}
+                  </ThemedText>
+                </View>
+                <ThemedText style={styles.tapHint}>Tap to calculate route</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDelete(favorite.id)}
+              >
+                <ThemedText style={styles.deleteButtonText}>🗑️</ThemedText>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
   },
-  titleContainer: {
+  scrollContent: {
+    padding: 20,
+    paddingTop: 60,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    opacity: 0.7,
+  },
+  header: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    opacity: 0.6,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    opacity: 0.6,
+    textAlign: 'center',
+    paddingHorizontal: 40,
+  },
+  favoriteCard: {
     flexDirection: 'row',
-    gap: 8,
+    backgroundColor: 'rgba(255, 149, 0, 0.1)',
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 149, 0, 0.2)',
+  },
+  favoriteContent: {
+    flex: 1,
+    padding: 16,
+  },
+  favoriteName: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#FF9500',
+  },
+  routeDetails: {
+    gap: 4,
+  },
+  locationText: {
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  arrow: {
+    fontSize: 14,
+    opacity: 0.5,
+    marginLeft: 8,
+  },
+  tapHint: {
+    fontSize: 12,
+    opacity: 0.5,
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  deleteButton: {
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+  },
+  deleteButtonText: {
+    fontSize: 28,
   },
 });

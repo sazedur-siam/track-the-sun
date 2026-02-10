@@ -7,12 +7,13 @@ import { Location } from '@/src/types';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+      ActivityIndicator,
+      FlatList,
+      Platform,
+      StyleSheet,
+      TextInput,
+      TouchableOpacity,
+      View,
 } from 'react-native';
 
 interface LocationInputProps {
@@ -60,6 +61,10 @@ export default function LocationInput({
     setQuery(result.displayName);
     setShowResults(false);
     setResults([]);
+    // Dismiss keyboard
+    if (Platform.OS !== 'web') {
+      require('react-native').Keyboard.dismiss();
+    }
   };
 
   const handleClear = () => {

@@ -3,6 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import CurrentLocationButton from '@/src/components/CurrentLocationButton';
 import FavoritesModal from '@/src/components/FavoritesModal';
 import LocationInput from '@/src/components/LocationInput';
+import NameInputModal from '@/src/components/NameInputModal';
 import TimePicker from '@/src/components/TimePicker';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { fetchRoute } from '@/src/services/routingService';
@@ -11,14 +12,14 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+      ActivityIndicator,
+      Alert,
+      KeyboardAvoidingView,
+      Platform,
+      ScrollView,
+      StyleSheet,
+      TouchableOpacity,
+      View,
 } from 'react-native';
 
 export default function HomeScreen() {
@@ -27,6 +28,7 @@ export default function HomeScreen() {
   const [departureTime, setDepartureTime] = useState(new Date());
   const [isCalculating, setIsCalculating] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showNameInput, setShowNameInput] = useState(false);
 
   const canCalculate = fromLocation !== null && toLocation !== null && !isCalculating;
 
@@ -79,12 +81,18 @@ export default function HomeScreen() {
 
   const handleSaveFavorite = async () => {
     if (!fromLocation || !toLocation) return;
+    setShowNameInput(true);
+  };
+
+  const handleSaveWithName = async (name: string) => {
+    if (!fromLocation || !toLocation) return;
 
     try {
-      await saveFavoriteRoute(fromLocation, toLocation);
+      await saveFavoriteRoute(fromLocation, toLocation, name);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Saved', 'Route saved to favorites!');
-    } catch (error) {
+      setShowNameInput(false);
+    } catch {
       Alert.alert('Error', 'Failed to save favorite route.');
     }
   };
@@ -205,12 +213,22 @@ export default function HomeScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
       {/* Favorites Modal */}
       <FavoritesModal
         visible={showFavorites}
         onClose={() => setShowFavorites(false)}
         onSelectFavorite={handleLoadFavorite}
-      />    </ThemedView>
+      />
+
+      {/* Name Input Modal */}
+      <NameInputModal
+        visible={showNameInput}
+        defaultName={fromLocation && toLocation ? `${fromLocation.name.split(',')[0]} → ${toLocation.name.split(',')[0]}` : ''}
+        onSave={handleSaveWithName}
+        onCancel={() => setShowNameInput(false)}
+      />
+    </ThemedView>
   );
 }
 
@@ -226,7 +244,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    marginTop: 20,
+    marginTop: 60,
     marginBottom: 30,
     alignItems: 'center',
   },
