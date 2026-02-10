@@ -4,6 +4,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useDebounce } from '@/src/hooks/useDebounce';
 import { searchLocation, SearchResult } from '@/src/services/geocodingService';
 import { Location } from '@/src/types';
+import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -50,6 +51,7 @@ export default function LocationInput({
   }, [debouncedQuery]);
 
   const handleSelectLocation = (result: SearchResult) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onLocationSelect({
       lat: result.lat,
       lng: result.lng,

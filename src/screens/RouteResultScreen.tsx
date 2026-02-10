@@ -3,6 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import { AnimatedProgressCircle } from '@/src/components/AnimatedProgressCircle';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
 import { calculateSunExposure, SunExposureResult } from '@/src/services/sunCalcService';
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -27,6 +28,8 @@ export default function RouteResultScreen() {
         const result = calculateSunExposure(route.waypoints);
         setSunData(result);
         setIsCalculating(false);
+        // Success haptic feedback
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         // Fade in animation
         Animated.timing(fadeAnim, {
           toValue: 1,

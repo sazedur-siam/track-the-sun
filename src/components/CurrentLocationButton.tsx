@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { reverseGeocode } from '@/src/services/geocodingService';
 import { Location } from '@/src/types';
+import * as Haptics from 'expo-haptics';
 import * as ExpoLocation from 'expo-location';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, TouchableOpacity } from 'react-native';
@@ -39,6 +40,7 @@ export default function CurrentLocationButton({
       // Get address name
       const name = await reverseGeocode(latitude, longitude);
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onLocationSelect({
         lat: latitude,
         lng: longitude,

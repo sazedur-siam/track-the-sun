@@ -135,18 +135,33 @@ Edge cases handled:
 
 ---
 
-### Phase 5 — Polish & UX
+### Phase 5 — Polish & UX ✅ COMPLETE
 **Goal:** App feels smooth and complete
 
-- Loading animation while route + sun is being calculated
-- Smooth transitions between screens
-- Error handling with user-friendly messages
-- Dark mode support
-- "Swap" button to reverse origin/destination
-- "Recalculate" with different time
-- App icon and splash screen branding
+- ✅ Loading animation while route + sun is being calculated
+- ✅ Smooth transitions between screens
+- ✅ Error handling with user-friendly messages
+- ✅ Dark mode support (automatic theme switching)
+- ✅ "Swap" button to reverse origin/destination
+- ✅ "Recalculate" with different time (via Plan Another Route button)
+- ✅ App icon and splash screen branding
+- ✅ Haptic feedback on key interactions
 
 **Deliverable:** Production-quality feel
+
+**Implementation Notes:**
+- Haptic feedback using expo-haptics on:
+  - Calculate button press (Medium impact)
+  - Location swap (Light impact)
+  - Location selection (Light impact)
+  - Current location obtained (Success notification)
+  - Results displayed (Success notification)
+- Dark mode automatically handled via ThemedView/ThemedText components
+- App icon and splash screen configured in app.json with light/dark variants
+- Loading states with clear messages ("Finding Route...", "Calculating sun position...")
+- Smooth fade-in animations (600ms) on results screen
+- Clean error handling with Alert dialogs
+- "Plan Another Route" button allows easy recalculation
 
 ---
 

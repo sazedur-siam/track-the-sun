@@ -5,6 +5,7 @@ import LocationInput from '@/src/components/LocationInput';
 import TimePicker from '@/src/components/TimePicker';
 import { fetchRoute } from '@/src/services/routingService';
 import { Location } from '@/src/types';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   const handleCalculate = async () => {
     if (!canCalculate || !fromLocation || !toLocation) return;
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsCalculating(true);
 
     try {
@@ -66,6 +68,7 @@ export default function HomeScreen() {
   };
 
   const handleSwapLocations = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const temp = fromLocation;
     setFromLocation(toLocation);
     setToLocation(temp);
