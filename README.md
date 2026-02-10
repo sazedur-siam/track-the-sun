@@ -42,14 +42,14 @@ TrackTheSun is a React Native mobile app that calculates which side of a bus/veh
 
 ## 🚀 Development Phases
 
-### ✅ Phase 0 - Project Setup (COMPLETE)
+### ✅ Phase 0 - Project Setup
 - [x] Initialize Expo project
 - [x] Set up folder structure (`src/components`, `src/screens`, `src/services`, etc.)
 - [x] Install core dependencies (suncalc, expo-location, react-native-maps)
 - [x] Create loading screen with smooth transition
 - [x] App launches on both iOS and Android
 
-### 🚧 Phase 1 - Location Input UI (Next)
+### 🚧 Phase 1 - Location Input UI
 - [ ] Build main screen with location inputs
 - [ ] Integrate Nominatim autocomplete
 - [ ] Add "Use current location" feature
@@ -112,16 +112,3 @@ The app has been tested to:
 - ✅ Transition to home screen after 2 seconds
 - ✅ Support dark mode
 
-## 📝 Next Steps
-
-Follow [Plan.md](./Plan.md) for detailed phase-by-phase implementation guide.
-
-**Current Status**: Phase 0 Complete ✅ | Ready for Phase 1
-
-## 📄 License
-
-This project is free and open source.
-
----
-
-Built with ❤️ using Expo and React Native
