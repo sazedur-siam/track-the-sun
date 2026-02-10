@@ -40,30 +40,46 @@ Great choices! This keeps everything free and gives users real flexibility. Let 
 
 ---
 
-### Phase 1 — Location Input UI
+### Phase 1 — Location Input UI ✅ COMPLETE
 **Goal:** User can search and select "From" and "To" locations
 
-- Build the main screen layout with two input fields (Current Location / Destination)
-- Integrate Nominatim API for location autocomplete (debounced search)
-- Add "Use my current location" button using `expo-location`
-- Store selected locations (lat/lng + display name) in state
-- Add a departure time picker (defaults to "Now", with option to pick custom date/time)
-- "Calculate" button (disabled until both locations are selected)
+- ✅ Build the main screen layout with two input fields (Current Location / Destination)
+- ✅ Integrate Nominatim API for location autocomplete (debounced search)
+- ✅ Add "Use my current location" button using `expo-location`
+- ✅ Store selected locations (lat/lng + display name) in state
+- ✅ Add a departure time picker (defaults to "Now", with option to pick custom date/time)
+- ✅ "Calculate" button (disabled until both locations are selected)
 
 **Deliverable:** User can search places, select origin/destination, pick time, and tap Calculate
 
+**Implementation Notes:**
+- Clean, simple components without over-engineering
+- 600ms debounce on search to respect Nominatim rate limits
+- Native date/time picker with platform-specific UI
+- Swap button for quick origin/destination reversal
+- Full dark/light mode support
+- Comprehensive error handling
+
 ---
 
-### Phase 2 — Route Fetching & Processing
+### Phase 2 — Route Fetching & Processing ✅ COMPLETE
 **Goal:** Get the actual bus/driving route between two points
 
-- Integrate OSRM API to fetch route between origin and destination
-- Decode the route polyline into an array of lat/lng waypoints
-- Estimate travel duration and calculate time-at-each-waypoint (for sun position over time)
-- Handle error states (no route found, network error)
-- Cache/store the processed route data
+- ✅ Integrate OSRM API to fetch route between origin and destination
+- ✅ Decode the route polyline into an array of lat/lng waypoints
+- ✅ Estimate travel duration and calculate time-at-each-waypoint (for sun position over time)
+- ✅ Handle error states (no route found, network error)
+- ✅ Cache/store the processed route data
 
 **Deliverable:** Given two locations, app fetches and stores a series of waypoints with timestamps
+
+**Implementation Notes:**
+- OSRM public API integration (free, no API key needed)
+- Custom polyline decoder for OSRM's polyline6 format
+- Waypoint timestamps calculated based on linear progression
+- Results screen displays route details (distance, duration, times)
+- Loading states with spinner and user feedback
+- Comprehensive error handling with user-friendly messages
 
 ---
 

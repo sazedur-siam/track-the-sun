@@ -1,8 +1,9 @@
 /**
  * Geocoding Service
  * Uses Nominatim/OpenStreetMap API for location search and geocoding
- * Phase 1: Location search and autocomplete will be implemented here
  */
+
+const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
 
 export interface SearchResult {
   displayName: string;
@@ -17,10 +18,42 @@ export interface SearchResult {
  * @returns Array of search results
  */
 export async function searchLocation(query: string): Promise<SearchResult[]> {
-  // TODO: Phase 1 - Implement Nominatim API integration
-  // Remember to add debouncing and rate limiting (1 req/sec)
-  console.log("searchLocation called with:", query);
-  return [];
+  if (!query || query.trim().length < 3) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `${NOMINATIM_BASE_URL}/search?` +
+        new URLSearchParams({
+          q: query,
+          format: "json",
+          limit: "5",
+          addressdetails: "1",
+        }),
+      {
+        headers: {
+          "User-Agent": "TrackTheSun/1.0",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Search failed");
+    }
+
+    const data = await response.json();
+
+    return data.map((item: any) => ({
+      displayName: item.display_name,
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon),
+      type: item.type,
+    }));
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return [];
+  }
 }
 
 /**
@@ -33,7 +66,29 @@ export async function reverseGeocode(
   lat: number,
   lng: number,
 ): Promise<string | null> {
-  // TODO: Phase 1 - Implement reverse geocoding
-  console.log("reverseGeocode called with:", lat, lng);
-  return null;
+  try {
+    const response = await fetch(
+      `${NOMINATIM_BASE_URL}/reverse?` +
+        new URLSearchParams({
+          lat: lat.toString(),
+          lon: lng.toString(),
+          format: "json",
+        }),
+      {
+        headers: {
+          "User-Agent": "TrackTheSun/1.0",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Reverse geocoding failed");
+    }
+
+    const data = await response.json();
+    return data.display_name || null;
+  } catch (error) {
+    console.error("Reverse geocoding error:", error);
+    return null;
+  }
 }

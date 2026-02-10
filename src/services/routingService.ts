@@ -1,8 +1,9 @@
 /**
  * Routing Service
  * Uses OSRM API to fetch routes between locations
- * Phase 2: Full route fetching and waypoint processing will be implemented here
  */
+
+const OSRM_BASE_URL = "https://router.project-osrm.org";
 
 export interface Location {
   lat: number;
@@ -23,18 +24,107 @@ export interface Route {
 }
 
 /**
+ * Decode OSRM polyline to coordinates
+ * @param encoded - Encoded polyline string
+ * @returns Array of [lat, lng] coordinates
+ */
+function decodePolyline(encoded: string): [number, number][] {
+  const coordinates: [number, number][] = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte: number;
+
+    // Decode latitude
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const deltaLat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += deltaLat;
+
+    shift = 0;
+    result = 0;
+
+    // Decode longitude
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const deltaLng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += deltaLng;
+
+    coordinates.push([lat / 1e6, lng / 1e6]);
+  }
+
+  return coordinates;
+}
+
+/**
  * Fetch route between two locations using OSRM
  * @param origin - Starting location
  * @param destination - Ending location
- * @returns Route with waypoints
+ * @param departureTime - Time of departure
+ * @returns Route with waypoints and timestamps
  */
 export async function fetchRoute(
   origin: Location,
   destination: Location,
+  departureTime: Date = new Date(),
 ): Promise<Route | null> {
-  // TODO: Phase 2 - Implement OSRM API integration
-  console.log("fetchRoute called with:", origin, destination);
-  return null;
+  try {
+    // Build OSRM request URL
+    const url = `${OSRM_BASE_URL}/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=polyline6`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch route");
+    }
+
+    const data = await response.json();
+
+    if (data.code !== "Ok" || !data.routes || data.routes.length === 0) {
+      throw new Error("No route found");
+    }
+
+    const route = data.routes[0];
+    const distance = route.distance; // meters
+    const duration = route.duration; // seconds
+    const geometry = route.geometry;
+
+    // Decode polyline to get coordinates
+    const coordinates = decodePolyline(geometry);
+
+    // Create waypoints with timestamps
+    const waypoints: RouteWaypoint[] = coordinates.map((coord, index) => {
+      // Calculate time offset for this waypoint
+      const progress = index / (coordinates.length - 1);
+      const timeOffset = progress * duration * 1000; // milliseconds
+      const timestamp = new Date(departureTime.getTime() + timeOffset);
+
+      return {
+        lat: coord[0],
+        lng: coord[1],
+        timestamp,
+      };
+    });
+
+    return {
+      waypoints,
+      distance,
+      duration,
+    };
+  } catch (error) {
+    console.error("Routing error:", error);
+    return null;
+  }
 }
 
 /**
@@ -62,4 +152,31 @@ export function calculateBearing(
   const bearing = ((θ * 180) / Math.PI + 360) % 360;
 
   return bearing;
+}
+
+/**
+ * Format distance for display
+ * @param meters - Distance in meters
+ * @returns Formatted string (e.g., "5.2 km" or "850 m")
+ */
+export function formatDistance(meters: number): string {
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(1)} km`;
+  }
+  return `${Math.round(meters)} m`;
+}
+
+/**
+ * Format duration for display
+ * @param seconds - Duration in seconds
+ * @returns Formatted string (e.g., "1h 23m" or "15m")
+ */
+export function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
 }
