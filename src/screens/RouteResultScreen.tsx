@@ -110,7 +110,7 @@ export default function RouteResultScreen() {
             {/* Sun Exposure Results */}
             <View style={styles.sunCard}>
               <ThemedText type="subtitle" style={styles.sunCardTitle}>
-                ☀️ Sun Exposure
+                ☀️ Percentage of Direct Sunlight
               </ThemedText>
 
               {sunData.hasDirectSunlight ? (
