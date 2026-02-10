@@ -3,11 +3,11 @@ import { ThemedView } from '@/components/themed-view';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withSequence,
-    withTiming,
+      useAnimatedStyle,
+      useSharedValue,
+      withRepeat,
+      withSequence,
+      withTiming,
 } from 'react-native-reanimated';
 
 interface LoadingScreenProps {
@@ -64,7 +64,7 @@ export default function LoadingScreen({ onLoadComplete }: LoadingScreenProps) {
         TrackTheSun
       </ThemedText>
       <ThemedText style={styles.subtitle}>
-        Find the sunny side of your journey
+        Find the cool side of your journey
       </ThemedText>
       <ActivityIndicator size="large" color="#FFA500" style={styles.spinner} />
     </ThemedView>
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sunIcon: {
-    fontSize: 80,
+    fontSize: 40,
   },
   title: {
     fontSize: 32,

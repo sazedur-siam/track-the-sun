@@ -121,7 +121,7 @@ export default function HomeScreen() {
               ☀️ TrackTheSun
             </ThemedText>
             <ThemedText style={styles.subtitle}>
-              Find the sunny side of your journey
+              Find the cool side of your journey
             </ThemedText>
             <TouchableOpacity
               style={styles.favoritesButton}
