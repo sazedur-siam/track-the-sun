@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noSunIcon: {
-    fontSize: 64,
+    fontSize: 24,
     marginBottom: 16,
   },
   noSunText: {
