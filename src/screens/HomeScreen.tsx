@@ -1,9 +1,12 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import CurrentLocationButton from '@/src/components/CurrentLocationButton';
 import FavoritesModal from '@/src/components/FavoritesModal';
 import LocationInput from '@/src/components/LocationInput';
 import NameInputModal from '@/src/components/NameInputModal';
+import SunAnimation from '@/src/components/SunAnimation';
 import TimePicker from '@/src/components/TimePicker';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { fetchRoute } from '@/src/services/routingService';
@@ -29,6 +32,8 @@ export default function HomeScreen() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showNameInput, setShowNameInput] = useState(false);
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
 
   const handleDepartureTimeChange = (time: Date) => {
     setDepartureTime(time);
@@ -117,101 +122,105 @@ export default function HomeScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
+            <SunAnimation />
             <ThemedText type="title" style={styles.title}>
-              ☀️ TrackTheSun
+              TrackTheSun
             </ThemedText>
             <ThemedText style={styles.subtitle}>
-              Find the cool side of your journey
+              Find the shady side of your journey
             </ThemedText>
+          </View>
+
+          {/* Main Card */}
+          <View style={[styles.mainCard, { borderColor: theme.border, shadowColor: theme.text }]}>
+             
+               {/* Current Location Button */}
+            <View style={styles.sectionHeader}>
+                 <CurrentLocationButton onLocationSelect={setFromLocation} />
+                 <TouchableOpacity
+                    style={[styles.favoritesButton, { backgroundColor: theme.secondary }]}
+                    onPress={() => setShowFavorites(true)}
+                    >
+                    <ThemedText style={styles.favoritesButtonText}>⭐ Favorites</ThemedText>
+                </TouchableOpacity>
+            </View>
+
+            {/* From Location */}
+            <LocationInput
+                label="From"
+                placeholder="Search starting location..."
+                onLocationSelect={setFromLocation}
+                selectedLocation={fromLocation}
+            />
+
+            {/* Swap Button */}
+            {(fromLocation || toLocation) && (
+                <View style={styles.swapContainer}>
+                <TouchableOpacity
+                    style={[styles.swapButton, { backgroundColor: theme.primary }]}
+                    onPress={handleSwapLocations}
+                >
+                    <ThemedText style={styles.swapIcon}>⇅</ThemedText>
+                </TouchableOpacity>
+                </View>
+            )}
+
+            {/* To Location */}
+            <LocationInput
+                label="To"
+                placeholder="Search destination..."
+                onLocationSelect={setToLocation}
+                selectedLocation={toLocation}
+            />
+
+            {/* Departure Time */}
+            <TimePicker
+                label="Departure Time"
+                selectedTime={departureTime}
+                onTimeChange={handleDepartureTimeChange}
+            />
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            {/* Save Favorite Button */}
+            {fromLocation && toLocation && (
+                <TouchableOpacity
+                style={[styles.saveFavoriteButton, { backgroundColor: theme.secondary }]}
+                onPress={handleSaveFavorite}
+                >
+                <ThemedText style={styles.saveFavoriteText}>💾 Save Route</ThemedText>
+                </TouchableOpacity>
+            )}
+
+            {/* Calculate Button */}
             <TouchableOpacity
-              style={styles.favoritesButton}
-              onPress={() => setShowFavorites(true)}
+                style={[
+                styles.calculateButton,
+                { backgroundColor: canCalculate ? theme.primary : theme.icon },
+                ]}
+                onPress={handleCalculate}
+                disabled={!canCalculate}
             >
-              <ThemedText style={styles.favoritesButtonText}>⭐ Favorites</ThemedText>
+                {isCalculating ? (
+                <View style={styles.calculatingContainer}>
+                    <ActivityIndicator color="#fff" size="small" />
+                    <ThemedText style={[styles.calculateButtonText, { color: theme.secondary }]}>
+                    Tracing Sun...
+                    </ThemedText>
+                </View>
+                ) : (
+                <ThemedText style={[styles.calculateButtonText, { color: canCalculate ? '#111827' : '#fff' }]}>
+                    Calculate Sun Exposure
+                </ThemedText>
+                )}
             </TouchableOpacity>
           </View>
 
-          {/* Current Location Button */}
-          <CurrentLocationButton onLocationSelect={setFromLocation} />
-
-          {/* From Location */}
-          <LocationInput
-            label="From"
-            placeholder="Search starting location..."
-            onLocationSelect={setFromLocation}
-            selectedLocation={fromLocation}
-          />
-
-          {/* Swap Button */}
-          {(fromLocation || toLocation) && (
-            <View style={styles.swapContainer}>
-              <TouchableOpacity
-                style={styles.swapButton}
-                onPress={handleSwapLocations}
-              >
-                <ThemedText style={styles.swapIcon}>⇅</ThemedText>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* To Location */}
-          <LocationInput
-            label="To"
-            placeholder="Search destination..."
-            onLocationSelect={setToLocation}
-            selectedLocation={toLocation}
-          />
-
-          {/* Departure Time */}
-          <TimePicker
-            label="Departure Time"
-            selectedTime={departureTime}
-            onTimeChange={handleDepartureTimeChange}
-          />
-
-          {/* Save Favorite Button */}
-          {fromLocation && toLocation && (
-            <TouchableOpacity
-              style={styles.saveFavoriteButton}
-              onPress={handleSaveFavorite}
-            >
-              <ThemedText style={styles.saveFavoriteText}>💾 Save as Favorite</ThemedText>
-            </TouchableOpacity>
-          )}
-
-          {/* Calculate Button */}
-          <TouchableOpacity
-            style={[
-              styles.calculateButton,
-              !canCalculate && styles.calculateButtonDisabled,
-            ]}
-            onPress={handleCalculate}
-            disabled={!canCalculate}
-          >
-            {isCalculating ? (
-              <View style={styles.calculatingContainer}>
-                <ActivityIndicator color="#fff" size="small" />
-                <ThemedText style={styles.calculateButtonText}>
-                  Finding Route...
-                </ThemedText>
-              </View>
-            ) : (
-              <ThemedText style={styles.calculateButtonText}>
-                Calculate Sun Exposure
-              </ThemedText>
-            )}
-          </TouchableOpacity>
-
           {/* Helper Text */}
-          {!canCalculate && !isCalculating && (
-            <ThemedText style={styles.helperText}>
-              Please select both origin and destination to continue
-            </ThemedText>
-          )}
-          
           {isCalculating && (
             <ThemedText style={styles.helperText}>
-              🗺️ Fetching route from OSRM...
+              🗺️ Integrating with OSRM & SunCalc...
             </ThemedText>
           )}
         </ScrollView>
@@ -243,29 +252,45 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: 24,
     paddingBottom: 40,
   },
   header: {
-    marginTop: 60,
+    marginTop: 20,
     marginBottom: 30,
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 36,
+    fontWeight: '800',
     marginBottom: 8,
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
     opacity: 0.7,
     textAlign: 'center',
+    marginBottom: 10,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  mainCard: {
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+    marginBottom: 20,
   },
   favoritesButton: {
-    marginTop: 12,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#FF9500',
     borderRadius: 20,
   },
   favoritesButtonText: {
@@ -274,49 +299,51 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   saveFavoriteButton: {
-    backgroundColor: '#FF9500',
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginTop: 16,
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginRight: 10,
+    alignItems: 'center',
   },
   saveFavoriteText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
   },
   swapContainer: {
     alignItems: 'center',
-    marginVertical: -10,
-    zIndex: 0,
+    marginVertical: -16,
+    zIndex: 10,
   },
   swapButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#007AFF',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#fff', // White border to separate from inputs
   },
   swapIcon: {
     fontSize: 24,
-    color: '#fff',
+    color: '#023047', // Secondary color
+    fontWeight: 'bold',
   },
   calculateButton: {
-    backgroundColor: '#34C759',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 20,
-  },
-  calculateButtonDisabled: {
-    backgroundColor: '#8E8E93',
-    opacity: 0.5,
+    flex: 2,
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
   },
   calculateButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700',
   },
   calculatingContainer: {
     flexDirection: 'row',
@@ -325,9 +352,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   helperText: {
-    fontSize: 14,
+    fontSize: 13,
     opacity: 0.6,
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: 20,
+    fontStyle: 'italic',
   },
 });

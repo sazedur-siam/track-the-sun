@@ -1,17 +1,23 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import SunAnimation from '@/src/components/SunAnimation';
 import { FavoriteRoute, deleteFavoriteRoute, getFavoriteRoutes } from '@/src/services/favoritesService';
 import { fetchRoute } from '@/src/services/routingService';
-import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
 
 export default function SavedLocationsScreen() {
   const [favorites, setFavorites] = useState<FavoriteRoute[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
 
   const loadFavorites = async () => {
     const data = await getFavoriteRoutes();
@@ -83,7 +89,7 @@ export default function SavedLocationsScreen() {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF9500" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <ThemedText style={styles.loadingText}>Loading saved locations...</ThemedText>
         </View>
       </ThemedView>
@@ -95,12 +101,12 @@ export default function SavedLocationsScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={theme.primary} />
         }
       >
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>
-            ⭐ Saved Locations
+            Saved Locations
           </ThemedText>
           <ThemedText style={styles.subtitle}>
             {favorites.length} saved route{favorites.length !== 1 ? 's' : ''}
@@ -109,38 +115,45 @@ export default function SavedLocationsScreen() {
 
         {favorites.length === 0 ? (
           <View style={styles.emptyState}>
-            <ThemedText style={styles.emptyStateIcon}>📍</ThemedText>
+            <SunAnimation />
             <ThemedText style={styles.emptyStateText}>No saved locations yet</ThemedText>
             <ThemedText style={styles.emptyStateSubtext}>
               Save your frequent routes from the home screen for quick access
             </ThemedText>
           </View>
         ) : (
-          favorites.map((favorite) => (
-            <View key={favorite.id} style={styles.favoriteCard}>
-              <TouchableOpacity
-                style={styles.favoriteContent}
-                onPress={() => handleCalculateRoute(favorite)}
-              >
-                <ThemedText style={styles.favoriteName}>{favorite.name}</ThemedText>
-                <View style={styles.routeDetails}>
-                  <ThemedText style={styles.locationText} numberOfLines={1}>
-                    📍 {favorite.fromLocation.name}
-                  </ThemedText>
-                  <ThemedText style={styles.arrow}>↓</ThemedText>
-                  <ThemedText style={styles.locationText} numberOfLines={1}>
-                    📍 {favorite.toLocation.name}
-                  </ThemedText>
-                </View>
-                <ThemedText style={styles.tapHint}>Tap to calculate route</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDelete(favorite.id)}
-              >
-                <ThemedText style={styles.deleteButtonText}>🗑️</ThemedText>
-              </TouchableOpacity>
-            </View>
+          favorites.map((favorite, index) => (
+            <Animated.View 
+              key={favorite.id} 
+              entering={FadeInDown.delay(index * 100).springify()}
+              layout={Layout.springify()}
+            >
+              <View style={[styles.favoriteCard, { borderColor: theme.border, backgroundColor: theme.card }]}>
+                <TouchableOpacity
+                  style={styles.favoriteContent}
+                  onPress={() => handleCalculateRoute(favorite)}
+                >
+                  <ThemedText style={[styles.favoriteName, { color: theme.primary }]}>{favorite.name}</ThemedText>
+                  <View style={styles.routeDetails}>
+                    <ThemedText style={styles.locationText} numberOfLines={1}>
+                      📍 {favorite.fromLocation.name}
+                    </ThemedText>
+                    <ThemedText style={styles.arrow}>↓</ThemedText>
+                    <ThemedText style={styles.locationText} numberOfLines={1}>
+                      📍 {favorite.toLocation.name}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={styles.tapHint}>Tap to calculate route</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.deleteButton, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}
+                  onPress={() => handleDelete(favorite.id)}
+                >
+                   {/* Using Icon or Text. Since we don't have trash icon readily available in ui/icons without checking, text/emoji is safer */}
+                  <ThemedText style={[styles.deleteButtonText, { color: theme.danger }]}>🗑️</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
           ))
         )}
       </ScrollView>
@@ -172,7 +185,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: '800',
     marginBottom: 8,
   },
   subtitle: {
@@ -181,16 +194,13 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+    paddingVertical: 20,
   },
   emptyStateText: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
+    marginTop: 20,
   },
   emptyStateSubtext: {
     fontSize: 14,
@@ -200,22 +210,24 @@ const styles = StyleSheet.create({
   },
   favoriteCard: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 149, 0, 0.1)',
-    borderRadius: 16,
+    borderRadius: 20,
     marginBottom: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 149, 0, 0.2)',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   favoriteContent: {
     flex: 1,
-    padding: 16,
+    padding: 20,
   },
   favoriteName: {
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 12,
-    color: '#FF9500',
   },
   routeDetails: {
     gap: 4,
@@ -238,9 +250,8 @@ const styles = StyleSheet.create({
   deleteButton: {
     justifyContent: 'center',
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
   },
   deleteButtonText: {
-    fontSize: 28,
+    fontSize: 24,
   },
 });

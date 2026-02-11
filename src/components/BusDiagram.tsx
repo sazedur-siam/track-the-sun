@@ -1,4 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -13,11 +15,14 @@ export default function BusDiagram({
   westPercentage,
   recommendation,
 }: BusDiagramProps) {
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
+
   const getIntensity = (percentage: number) => {
-    if (percentage > 70) return 1;
-    if (percentage > 40) return 0.6;
-    if (percentage > 10) return 0.3;
-    return 0.1;
+    if (percentage > 70) return 0.8;
+    if (percentage > 40) return 0.5;
+    if (percentage > 10) return 0.2;
+    return 0.05;
   };
 
   const eastIntensity = getIntensity(eastPercentage);
@@ -31,74 +36,88 @@ export default function BusDiagram({
         {/* West Side (Left) */}
         <View style={styles.sideContainer}>
           <ThemedText style={styles.sideLabel}>West</ThemedText>
-          <View
-            style={[
+           <View style={[
               styles.busSide,
-              styles.westSide,
+              styles.sideOutline,
               {
-                backgroundColor: `rgba(92, 200, 250, ${westIntensity})`,
-                borderColor: recommendation === 'west' ? '#34C759' : 'transparent',
-                borderWidth: recommendation === 'west' ? 3 : 2,
-              },
-            ]}
-          >
-            {westPercentage > 0 && (
-              <ThemedText style={styles.sunIcon}>
-                {westPercentage > 50 ? '☀️☀️' : '☀️'}
-              </ThemedText>
-            )}
-          </View>
+                borderColor: recommendation === 'west' ? theme.secondary : theme.border,
+                borderWidth: recommendation === 'west' ? 3 : 1,
+                backgroundColor: 'transparent'
+              }
+           ]}>
+              <View style={[
+                StyleSheet.absoluteFill, 
+                { 
+                  backgroundColor: theme.primary, 
+                  opacity: westIntensity, 
+                  borderRadius: 6 
+                }
+              ]} />
+              {westPercentage > 0 && (
+                <ThemedText style={styles.sunIcon}>
+                  {westPercentage > 50 ? '☀️☀️' : '☀️'}
+                </ThemedText>
+              )}
+           </View>
+
           {recommendation === 'west' && (
-            <ThemedText style={styles.recommendBadge}>✓ Sit here</ThemedText>
+            <ThemedText style={[styles.recommendBadge, { color: theme.secondary }]}>✓ Sit here</ThemedText>
           )}
         </View>
 
         {/* Bus Body */}
         <View style={styles.busBody}>
-          <View style={styles.busFront} />
-          <View style={styles.busMiddle}>
-            <View style={styles.window} />
-            <View style={styles.window} />
-            <View style={styles.window} />
+          <View style={[styles.busFront, { backgroundColor: theme.primary }]} />
+          <View style={[styles.busMiddle, { backgroundColor: theme.primary }]}>
+            <View style={[styles.window, { backgroundColor: '#E2E8F0' }]} />
+            <View style={[styles.window, { backgroundColor: '#E2E8F0' }]} />
+            <View style={[styles.window, { backgroundColor: '#E2E8F0' }]} />
           </View>
-          <View style={styles.busBack} />
+          <View style={[styles.busBack, { backgroundColor: theme.primary }]} />
           <ThemedText style={styles.busLabel}>🚌</ThemedText>
         </View>
 
         {/* East Side (Right) */}
         <View style={styles.sideContainer}>
           <ThemedText style={styles.sideLabel}>East</ThemedText>
-          <View
-            style={[
+           <View style={[
               styles.busSide,
-              styles.eastSide,
+              styles.sideOutline,
               {
-                backgroundColor: `rgba(255, 149, 0, ${eastIntensity})`,
-                borderColor: recommendation === 'east' ? '#34C759' : 'transparent',
-                borderWidth: recommendation === 'east' ? 3 : 2,
-              },
-            ]}
-          >
-            {eastPercentage > 0 && (
-              <ThemedText style={styles.sunIcon}>
-                {eastPercentage > 50 ? '☀️☀️' : '☀️'}
-              </ThemedText>
-            )}
-          </View>
+                borderColor: recommendation === 'east' ? theme.secondary : theme.border,
+                borderWidth: recommendation === 'east' ? 3 : 1,
+                backgroundColor: 'transparent'
+              }
+           ]}>
+              <View style={[
+                StyleSheet.absoluteFill, 
+                { 
+                  backgroundColor: theme.primary, 
+                  opacity: eastIntensity, 
+                  borderRadius: 6 
+                }
+              ]} />
+              {/* Sun Icon Logic */}
+              {eastPercentage > 0 && (
+                <ThemedText style={styles.sunIcon}>
+                  {eastPercentage > 50 ? '☀️☀️' : '☀️'}
+                </ThemedText>
+              )}
+           </View>
           {recommendation === 'east' && (
-            <ThemedText style={styles.recommendBadge}>✓ Sit here</ThemedText>
+            <ThemedText style={[styles.recommendBadge, { color: theme.secondary }]}>✓ Sit here</ThemedText>
           )}
         </View>
       </View>
 
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#FF9500' }]} />
-          <ThemedText style={styles.legendText}>East sun exposure</ThemedText>
+          <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
+          <ThemedText style={styles.legendText}>Sun intensity (Yellow)</ThemedText>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#5AC8FA' }]} />
-          <ThemedText style={styles.legendText}>West sun exposure</ThemedText>
+          <View style={[styles.borderDot, { borderColor: theme.secondary }]} />
+          <ThemedText style={styles.legendText}>Recommended Seat</ThemedText>
         </View>
       </View>
     </View>
@@ -134,23 +153,24 @@ const styles = StyleSheet.create({
     width: 60,
     height: 120,
     borderRadius: 8,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  westSide: {
-    borderColor: '#5AC8FA',
-  },
-  eastSide: {
-    borderColor: '#FF9500',
+  sideOutline: {
+    borderStyle: 'solid',
   },
   sunIcon: {
     fontSize: 24,
+    zIndex: 1,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   recommendBadge: {
     fontSize: 12,
-    color: '#34C759',
-    fontWeight: '700',
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   busBody: {
     width: 80,
@@ -161,14 +181,12 @@ const styles = StyleSheet.create({
   busFront: {
     width: 70,
     height: 20,
-    backgroundColor: '#FFD60A',
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
   },
   busMiddle: {
     width: 70,
     height: 80,
-    backgroundColor: '#FFD60A',
     gap: 8,
     paddingVertical: 8,
     alignItems: 'center',
@@ -176,13 +194,11 @@ const styles = StyleSheet.create({
   window: {
     width: 50,
     height: 16,
-    backgroundColor: '#87CEEB',
     borderRadius: 4,
   },
   busBack: {
     width: 70,
     height: 20,
-    backgroundColor: '#FFD60A',
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
   },
@@ -194,6 +210,7 @@ const styles = StyleSheet.create({
   legend: {
     marginTop: 20,
     gap: 8,
+    alignItems: 'center', 
   },
   legendItem: {
     flexDirection: 'row',
@@ -204,6 +221,13 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
+  },
+  borderDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+    borderWidth: 2,
+    backgroundColor: 'transparent',
   },
   legendText: {
     fontSize: 14,

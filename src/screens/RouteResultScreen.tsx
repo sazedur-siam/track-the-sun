@@ -1,5 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AnimatedProgressCircle } from '@/src/components/AnimatedProgressCircle';
 import BusDiagram from '@/src/components/BusDiagram';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
@@ -14,6 +16,8 @@ export default function RouteResultScreen() {
   const [sunData, setSunData] = useState<SunExposureResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
   
   // Parse route data from params
   let route: Route | null = null;
@@ -55,7 +59,6 @@ export default function RouteResultScreen() {
         }).start();
       }, 500);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.route]);
 
   if (!route) {
@@ -67,7 +70,7 @@ export default function RouteResultScreen() {
             Unable to calculate route. Please try again.
           </ThemedText>
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: theme.primary }]}
             onPress={() => router.back()}
           >
             <ThemedText style={styles.backButtonText}>Go Back</ThemedText>
@@ -94,13 +97,13 @@ export default function RouteResultScreen() {
         {/* Header */}
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>
-            ☀️ Sun Exposure Analysis
+            Analysis Result
           </ThemedText>
         </View>
 
         {isCalculating ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FFA500" />
+            <ActivityIndicator size="large" color={theme.primary} />
             <ThemedText style={styles.loadingText}>
               Calculating sun position...
             </ThemedText>
@@ -108,9 +111,9 @@ export default function RouteResultScreen() {
         ) : sunData ? (
           <Animated.View style={{ opacity: fadeAnim }}>
             {/* Sun Exposure Results */}
-            <View style={styles.sunCard}>
-              <ThemedText type="subtitle" style={styles.sunCardTitle}>
-                ☀️ Percentage of Direct Sunlight
+            <View style={[styles.card, { borderColor: theme.primary, borderWidth: 2 }]}>
+              <ThemedText type="subtitle" style={styles.cardTitle}>
+                Direct Sun Percentage
               </ThemedText>
 
               {sunData.hasDirectSunlight ? (
@@ -118,26 +121,32 @@ export default function RouteResultScreen() {
                   <View style={styles.percentageContainer}>
                     <AnimatedProgressCircle
                       percentage={sunData.eastPercentage}
-                      color="#FF9500"
+                      color={theme.primary}
+                      textColor="#111827"
                       label="East Side"
-                      delay={300}
+                      delay={100}
+                      isHot={sunData.eastPercentage > sunData.westPercentage}
+                      isCold={sunData.eastPercentage < sunData.westPercentage}
                     />
 
                     <ThemedText style={styles.percentageVs}>vs</ThemedText>
 
                     <AnimatedProgressCircle
                       percentage={sunData.westPercentage}
-                      color="#5AC8FA"
+                      color={theme.secondary}
+                      textColor={theme.text}
                       label="West Side"
                       delay={500}
+                      isHot={sunData.westPercentage > sunData.eastPercentage}
+                      isCold={sunData.westPercentage < sunData.eastPercentage}
                     />
                   </View>
 
                   {/* Recommendation */}
                   {sunData.recommendation !== 'neutral' && (
-                    <View style={styles.recommendationCard}>
-                      <ThemedText style={styles.recommendationIcon}>💺</ThemedText>
-                      <ThemedText style={styles.recommendationTitle}>
+                    <View style={[styles.recommendationBox, { backgroundColor: theme.card }]}>
+                      <ThemedText style={styles.recommendationIcon}>✨</ThemedText>
+                      <ThemedText style={[styles.recommendationTitle, { color: theme.primary }]}>
                         Recommendation
                       </ThemedText>
                       <ThemedText style={styles.recommendationText}>
@@ -147,7 +156,7 @@ export default function RouteResultScreen() {
                   )}
 
                   {sunData.recommendation === 'neutral' && (
-                    <View style={styles.neutralCard}>
+                    <View style={[styles.recommendationBox, { backgroundColor: theme.card }]}>
                       <ThemedText style={styles.neutralText}>
                         {sunData.summary}
                       </ThemedText>
@@ -166,7 +175,7 @@ export default function RouteResultScreen() {
 
             {/* Bus Diagram */}
             {sunData.hasDirectSunlight && (
-              <View style={styles.card}>
+              <View style={[styles.card, { backgroundColor: theme.card }]}>
                 <BusDiagram
                   eastPercentage={sunData.eastPercentage}
                   westPercentage={sunData.westPercentage}
@@ -176,20 +185,20 @@ export default function RouteResultScreen() {
             )}
 
             {/* Route Details */}
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: theme.card }]}>
               <ThemedText type="subtitle" style={styles.cardTitle}>
                 📍 Journey Details
               </ThemedText>
               
               <View style={styles.locationRow}>
-                <ThemedText style={styles.label}>From:</ThemedText>
+                <ThemedText style={styles.label}>From</ThemedText>
                 <ThemedText style={styles.value} numberOfLines={2}>
                   {fromName}
                 </ThemedText>
               </View>
 
               <View style={styles.locationRow}>
-                <ThemedText style={styles.label}>To:</ThemedText>
+                <ThemedText style={styles.label}>To</ThemedText>
                 <ThemedText style={styles.value} numberOfLines={2}>
                   {toName}
                 </ThemedText>
@@ -197,21 +206,21 @@ export default function RouteResultScreen() {
             </View>
 
             {/* Time & Distance */}
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: theme.card }]}>
               <ThemedText type="subtitle" style={styles.cardTitle}>
                 ⏱️ Time & Distance
               </ThemedText>
 
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
-                  <ThemedText style={styles.statValue}>
+                  <ThemedText style={[styles.statValue, { color: theme.primary }]}>
                     {formatDistance(route.distance)}
                   </ThemedText>
                   <ThemedText style={styles.statLabel}>Distance</ThemedText>
                 </View>
 
                 <View style={styles.statItem}>
-                  <ThemedText style={styles.statValue}>
+                  <ThemedText style={[styles.statValue, { color: theme.secondary }]}>
                     {formatDuration(route.duration)}
                   </ThemedText>
                   <ThemedText style={styles.statLabel}>Est. Duration*</ThemedText>
@@ -222,7 +231,7 @@ export default function RouteResultScreen() {
                 *Duration is estimated based on typical speeds and does not account for real-time traffic conditions.
               </ThemedText>
 
-              <View style={styles.timeRow}>
+              <View style={[styles.timeRow, { borderTopColor: theme.border }]}>
                 <View style={styles.timeItem}>
                   <ThemedText style={styles.timeLabel}>Departure</ThemedText>
                   <ThemedText style={styles.timeValue}>
@@ -245,11 +254,11 @@ export default function RouteResultScreen() {
 
         {/* Back Button */}
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: theme.secondary }]}
           onPress={() => router.back()}
         >
           <ThemedText style={styles.backButtonText}>
-            ← Plan Another Route
+            Start New Search
           </ThemedText>
         </TouchableOpacity>
       </ScrollView>
@@ -262,17 +271,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
+    padding: 24,
+    paddingTop: 40,
+    paddingBottom: 60,
   },
   header: {
-    marginBottom: 30,
+    marginBottom: 20,
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     marginBottom: 8,
   },
   loadingContainer: {
@@ -285,17 +294,20 @@ const styles = StyleSheet.create({
     marginTop: 20,
     opacity: 0.7,
   },
-  sunCard: {
+  card: {
     padding: 24,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 165, 0, 0.1)',
+    borderRadius: 24,
     marginBottom: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 165, 0, 0.3)',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  sunCardTitle: {
-    fontSize: 24,
-    marginBottom: 24,
+  cardTitle: {
+    fontSize: 18,
+    marginBottom: 20,
+    fontWeight: '700',
     textAlign: 'center',
   },
   percentageContainer: {
@@ -305,36 +317,29 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   percentageVs: {
-    fontSize: 20,
+    fontSize: 28,
     opacity: 0.5,
     fontWeight: '600',
   },
-  recommendationCard: {
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: 'rgba(52, 199, 89, 0.15)',
+  recommendationBox: {
+    padding: 24,
+    borderRadius: 20,
     alignItems: 'center',
   },
   recommendationIcon: {
-    fontSize: 48,
+    fontSize: 40,
     marginBottom: 8,
   },
   recommendationTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '800',
     marginBottom: 8,
-    color: '#34C759',
   },
   recommendationText: {
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
-  },
-  neutralCard: {
-    padding: 20,
-    borderRadius: 12,
-    backgroundColor: 'rgba(142, 142, 147, 0.15)',
-    alignItems: 'center',
+    opacity: 0.9,
   },
   neutralText: {
     fontSize: 16,
@@ -355,27 +360,20 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     lineHeight: 24,
   },
-  card: {
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 20,
-    marginBottom: 16,
-  },
   locationRow: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    opacity: 0.7,
+    fontSize: 12,
+    opacity: 0.5,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
     marginBottom: 4,
+    fontWeight: '700',
   },
   value: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -386,12 +384,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    fontSize: 28,
+    fontWeight: '800',
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 13,
     opacity: 0.7,
     marginTop: 4,
   },
@@ -409,10 +406,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
   },
   timeItem: {
     flex: 1,
+    alignItems: 'center',
   },
   timeLabel: {
     fontSize: 12,
@@ -420,37 +417,39 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   timeValue: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
   },
   timeArrow: {
-    fontSize: 24,
+    fontSize: 20,
     marginHorizontal: 10,
-    opacity: 0.5,
+    opacity: 0.3,
   },
   backButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 20,
+    borderRadius: 20,
     marginTop: 10,
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   backButtonText: {
-    color: '#fff',
+    color: '#111827', // Use dark text for better contrast on both yellow (primary) and light blue (secondaryLight)
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
   },
   errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
+    padding: 24,    
+    alignItems: 'center'
   },
   errorText: {
     fontSize: 16,
-    opacity: 0.7,
     textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 32,
-  },
+    marginVertical: 16,
+    opacity: 0.7
+  }
 });
