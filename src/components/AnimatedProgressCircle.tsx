@@ -69,7 +69,7 @@ const Snowflake = ({ size, index }: { size: number, index: number }) => {
         <Reanimated.View 
         style={[{ position: 'absolute', top: -size/4 }, style]}
         >
-        <MaterialCommunityIcons name="snowflake" size={size/3} color="#FFFFFF" />
+        <MaterialCommunityIcons name="snowflake" size={size/3} color="#0891B2" />
         </Reanimated.View>
     );
 };
@@ -108,12 +108,12 @@ const FreezeEffect = ({ size }: { size: number }) => {
     <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', zIndex: -1 }]}>
          {/* Main Background Snowflake */}
          <Reanimated.View style={[{ position: 'absolute' }, iconStyle]}>
-             <MaterialCommunityIcons name="snowflake" size={size * 1.6} color="#A5F3FC" style={{ opacity: 0.5 }} />
+             <MaterialCommunityIcons name="snowflake" size={size * 1.4} color="#A5F3FC" style={{ opacity: 0.5 }} />
          </Reanimated.View>
 
           {/* Inner Snowflake for intensity */}
          <Reanimated.View style={[{ position: 'absolute' }, iconStyle]}>
-             <MaterialCommunityIcons name="snowflake" size={size * 1.2} color="#67E8F9" style={{ opacity: 0.3 }} />
+             <MaterialCommunityIcons name="snowflake" size={size * 1.0} color="#67E8F9" style={{ opacity: 0.3 }} />
          </Reanimated.View>
          
          {[0, 1, 2, 3].map((i) => (
@@ -238,7 +238,7 @@ const FlameEffect = ({ size }: { size: number }) => {
       >
         <MaterialCommunityIcons
           name="fire"
-          size={size * 1.8}
+          size={size * 1.5}
           color="#EF4444" // Red-Hot Core
           style={{ opacity: 0.8 }}
         />
@@ -253,7 +253,7 @@ const FlameEffect = ({ size }: { size: number }) => {
       >
        <MaterialCommunityIcons
         name="fire"
-        size={size * 1.4}
+        size={size * 1.2}
         color="#FF9500" // Orange inner
       />
       </Reanimated.View>
@@ -297,6 +297,9 @@ export function AnimatedProgressCircle({
     ]).start();
   }, [scaleAnim, opacityAnim, delay]);
 
+  // Calculate wrapper size to accommodate animations (flame/ice are 1.5x size)
+  const wrapperSize = size * 2;
+  
   return (
     <Animated.View
       style={[
@@ -307,34 +310,39 @@ export function AnimatedProgressCircle({
         },
       ]}
     >
-      <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
-          {isHot && <FlameEffect size={size} />}
-          {isCold && <FreezeEffect size={size} />}
-          
-          <View
-            style={[
-              styles.circle,
-              {
-                width: size,
-                height: size,
-                borderRadius: size / 2,
-                backgroundColor: color,
-                // Add border if hot/cold to separate from bg
-                borderWidth: (isHot || isCold) ? 2 : 0,
-                borderColor: '#FFFFFF40',
-                zIndex: 10
-              },
-            ]}
-          >
-            <ThemedText style={[styles.percentageText, { color: textColor }]}>{percentage}%</ThemedText>
+      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          {/* Larger container to prevent clipping of animations */}
+          <View style={{ width: wrapperSize, height: wrapperSize, alignItems: 'center', justifyContent: 'center' }}>
+             {/* Effects use absolute positioning to center themselves */}
+             <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+                {isHot && <FlameEffect size={size} />}
+                {isCold && <FreezeEffect size={size} />}
+             </View>
+             
+             {/* Circle positioned at center */}
+             <View
+                style={[
+                  styles.circle,
+                  {
+                    width: size,
+                    height: size,
+                    borderRadius: size / 2,
+                    backgroundColor: color,
+                    borderWidth: (isHot || isCold) ? 2 : 0,
+                    borderColor: '#FFFFFF40',
+                    zIndex: 10
+                  },
+                ]}
+              >
+                <ThemedText style={[styles.percentageText, { color: textColor }]}>{percentage}%</ThemedText>
+              </View>
           </View>
       </View>
+      
       <ThemedText style={[
           styles.label, 
           isHot && { color: '#EF4444', fontWeight: '800' },
-          isCold && { color: '#06B6D4', fontWeight: '800' },
-         { marginTop: 16 },
-
+          isCold && { color: '#0891B2', fontWeight: '800' }
       ]}>
         {isHot ? '🔥 ' : ''}{isCold ? '❄️ ' : ''}{label}
       </ThemedText>
@@ -345,27 +353,30 @@ export function AnimatedProgressCircle({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
+    marginBottom: 8,
+    overflow: 'visible', // Ensure animations don't get clipped
   },
   circle: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    // Removed marginBottom to align effects correctly
     shadowColor: '#000',
     shadowOffset: {
-      width: 0,
-      height: 4,
+        width: 0,
+        height: 4,
     },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   percentageText: {
-    fontSize: 32,
+    fontSize: 24, // Optimized font size for smaller circles
     fontWeight: 'bold',
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     opacity: 0.8,
+    marginTop: 12,
   },
 });

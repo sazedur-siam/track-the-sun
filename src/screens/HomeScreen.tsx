@@ -15,14 +15,14 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-      ActivityIndicator,
-      Alert,
-      KeyboardAvoidingView,
-      Platform,
-      ScrollView,
-      StyleSheet,
-      TouchableOpacity,
-      View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function HomeScreen() {
@@ -132,7 +132,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Main Card */}
-          <View style={[styles.mainCard, { borderColor: theme.border, shadowColor: theme.text }]}>
+          <View style={[styles.mainCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
              
                {/* Current Location Button */}
             <View style={styles.sectionHeader}>
@@ -276,21 +276,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 4,
   },
   mainCard: {
     borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 4 },
+    padding: 24,
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 2,
     marginBottom: 20,
+    gap: 16,
   },
   favoritesButton: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: 20,
   },
   favoritesButtonText: {

@@ -162,6 +162,7 @@ export default function RouteResultScreen() {
                       textColor="#111827"
                       label="East Side"
                       delay={100}
+                      size={80}
                       isHot={sunData.eastPercentage > sunData.westPercentage}
                       isCold={sunData.eastPercentage < sunData.westPercentage}
                     />
@@ -171,9 +172,10 @@ export default function RouteResultScreen() {
                     <AnimatedProgressCircle
                       percentage={sunData.westPercentage}
                       color={theme.secondary}
-                      textColor={theme.text}
+                      textColor={colorScheme === 'dark' ? '#111827' : '#FFFFFF'}
                       label="West Side"
                       delay={500}
+                      size={80}
                       isHot={sunData.westPercentage > sunData.eastPercentage}
                       isCold={sunData.westPercentage < sunData.eastPercentage}
                     />
@@ -294,7 +296,7 @@ export default function RouteResultScreen() {
           style={[styles.backButton, { backgroundColor: theme.secondary }]}
           onPress={() => router.back()}
         >
-          <ThemedText style={styles.backButtonText}>
+          <ThemedText style={[styles.backButtonText, { color: colorScheme === 'dark' ? '#111827' : '#FFFFFF' }]}>
             Start New Search
           </ThemedText>
         </TouchableOpacity>
@@ -357,7 +359,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 3,
   },
   cardTitle: {
     fontSize: 18,
@@ -370,6 +371,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     marginBottom: 24,
+    paddingTop: 20,
+    overflow: 'visible',
   },
   percentageVs: {
     fontSize: 28,
@@ -382,7 +385,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   recommendationIcon: {
-    fontSize: 40,
+    fontSize: 24,
     marginBottom: 8,
   },
   recommendationTitle: {
@@ -492,7 +495,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   backButtonText: {
-    color: '#111827', // Use dark text for better contrast on both yellow (primary) and light blue (secondaryLight)
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
