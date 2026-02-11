@@ -100,7 +100,6 @@ TrackTheSun/
 │   ├── constants/        # App constants
 │   └── types.ts          # TypeScript interfaces
 ├── assets/               # Images and fonts
-└── Plan.md              # Detailed implementation plan
 
 ```
 

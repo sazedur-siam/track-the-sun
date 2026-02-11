@@ -4,12 +4,14 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AnimatedProgressCircle } from '@/src/components/AnimatedProgressCircle';
 import BusDiagram from '@/src/components/BusDiagram';
+import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
 import { calculateSunExposure, SunExposureResult } from '@/src/services/sunCalcService';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function RouteResultScreen() {
   const params = useLocalSearchParams();
@@ -61,6 +63,31 @@ export default function RouteResultScreen() {
     }
   }, [params.route]);
 
+  const handleSaveRoute = async () => {
+    if (!route?.waypoints?.length) return;
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const fromLocation = {
+      lat: route.waypoints[0].lat,
+      lng: route.waypoints[0].lng,
+      name: fromName || "Start Location"
+    };
+
+    const toLocation = {
+      lat: route.waypoints[route.waypoints.length - 1].lat,
+      lng: route.waypoints[route.waypoints.length - 1].lng,
+      name: toName || "Destination"
+    };
+
+    try {
+      await saveFavoriteRoute(fromLocation, toLocation);
+      Alert.alert('Saved', 'Route has been added to your favorites.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save route.');
+    }
+  };
+
   if (!route) {
     return (
       <ThemedView style={styles.container}>
@@ -96,9 +123,19 @@ export default function RouteResultScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            Analysis Result
-          </ThemedText>
+          <View style={styles.titleRow}>
+            <ThemedText type="title" style={styles.title}>
+              Analysis Result
+            </ThemedText>
+            <TouchableOpacity 
+              onPress={handleSaveRoute}
+              style={[styles.saveButton, { backgroundColor: theme.card }]}
+              activeOpacity={0.7}
+            >
+              <MaterialCommunityIcons name="bookmark-plus-outline" size={24} color={theme.primary} />
+              <ThemedText style={[styles.saveText, { color: theme.primary }]}>Save</ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isCalculating ? (
@@ -277,12 +314,30 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20,
+  },
+  titleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  saveText: {
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   title: {
     fontSize: 28,
     fontWeight: '800',
-    marginBottom: 8,
   },
   loadingContainer: {
     padding: 60,
