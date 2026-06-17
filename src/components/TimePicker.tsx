@@ -1,5 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
+import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTranslation } from '@/src/i18n/LanguageProvider';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -10,15 +13,13 @@ interface TimePickerProps {
   onTimeChange: (time: Date) => void;
 }
 
-export default function TimePicker({
-  label,
-  selectedTime,
-  onTimeChange,
-}: TimePickerProps) {
+export default function TimePicker({ label, selectedTime, onTimeChange }: TimePickerProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date | null>(null);
   const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
+  const { t } = useTranslation();
   const isWeb = Platform.OS === 'web';
   const isIOS = Platform.OS === 'ios';
   const isAndroid = Platform.OS === 'android';
@@ -32,9 +33,9 @@ export default function TimePicker({
       const displayMinutes = minutes < 10 ? `0${minutes}` : minutes;
       const month = date.getMonth() + 1;
       const day = date.getDate();
-      return `${month}/${day} ${displayHours}:${displayMinutes} ${ampm}`;
-    } catch (error) {
-      return 'Invalid Date';
+      return `${month}/${day} · ${displayHours}:${displayMinutes} ${ampm}`;
+    } catch {
+      return t('time.invalidDate');
     }
   };
 
@@ -47,14 +48,10 @@ export default function TimePicker({
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const handleNow = () => {
-    onTimeChange(new Date());
-  };
+  const handleNow = () => onTimeChange(new Date());
 
   const handleChangeIOS = (event: any, date?: Date) => {
-    if (date) {
-      onTimeChange(date);
-    }
+    if (date) onTimeChange(date);
   };
 
   const handleDateChange = (event: any, date?: Date) => {
@@ -68,7 +65,6 @@ export default function TimePicker({
   const handleTimeChange = (event: any, date?: Date) => {
     setShowTimePicker(false);
     if (event.type === 'set' && date && tempDate) {
-      // Combine tempDate and time from date parameter
       const finalDate = new Date(tempDate);
       finalDate.setHours(date.getHours());
       finalDate.setMinutes(date.getMinutes());
@@ -79,42 +75,25 @@ export default function TimePicker({
 
   const handleWebDateChange = (e: any) => {
     const value = e.target.value;
-    if (value) {
-      const newDate = new Date(value);
-      onTimeChange(newDate);
-    }
-  };
-
-  const openPicker = () => {
-    setShowDatePicker(true);
+    if (value) onTimeChange(new Date(value));
   };
 
   return (
     <View style={styles.container}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
+      <ThemedText style={[styles.label, { color: theme.textSecondary }]}>{label}</ThemedText>
 
       <View style={styles.buttonRow}>
         <TouchableOpacity
-          style={[
-            styles.nowButton,
-            {
-              backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
-            },
-          ]}
+          style={[styles.nowButton, { backgroundColor: theme.accentSoft }]}
           onPress={handleNow}
+          accessibilityRole="button"
+          accessibilityLabel={t('time.nowA11y')}
         >
-          <ThemedText style={styles.buttonText}>Now</ThemedText>
+          <ThemedText style={[styles.nowText, { color: theme.text }]}>{t('time.now')}</ThemedText>
         </TouchableOpacity>
 
         {isWeb ? (
-          <View
-            style={[
-              styles.pickButton,
-              {
-                backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
-              },
-            ]}
-          >
+          <View style={[styles.pickButton, { backgroundColor: theme.inputBackground }]}>
             <input
               type="datetime-local"
               value={formatDateTimeLocal(selectedTime)}
@@ -125,7 +104,7 @@ export default function TimePicker({
                 border: 'none',
                 outline: 'none',
                 backgroundColor: 'transparent',
-                color: colorScheme === 'dark' ? '#fff' : '#000',
+                color: theme.text,
                 fontSize: 16,
                 paddingLeft: 0,
               }}
@@ -133,53 +112,37 @@ export default function TimePicker({
           </View>
         ) : (
           <TouchableOpacity
-            style={[
-              styles.pickButton,
-              {
-                backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
-              },
-            ]}
-            onPress={openPicker}
+            style={[styles.pickButton, { backgroundColor: theme.inputBackground }]}
+            onPress={() => setShowDatePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('time.changeA11y', { time: formatTime(selectedTime) })}
           >
-            <ThemedText style={styles.timeText}>{formatTime(selectedTime)}</ThemedText>
-            <ThemedText style={styles.icon}>📅</ThemedText>
+            <ThemedText style={[styles.timeText, { color: theme.text }]}>{formatTime(selectedTime)}</ThemedText>
+            <MaterialCommunityIcons name="calendar-clock" size={20} color={theme.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
 
       {isIOS && showDatePicker && (
         <>
-          <DateTimePicker
-            value={selectedTime}
-            mode="datetime"
-            display="spinner"
-            onChange={handleChangeIOS}
-          />
+          <DateTimePicker value={selectedTime} mode="datetime" display="spinner" onChange={handleChangeIOS} />
           <TouchableOpacity
-            style={styles.doneButton}
+            style={[styles.doneButton, { backgroundColor: theme.primary }]}
             onPress={() => setShowDatePicker(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('time.doneA11y')}
           >
-            <ThemedText style={styles.doneText}>Done</ThemedText>
+            <ThemedText style={[styles.doneText, { color: theme.onPrimary }]}>{t('time.done')}</ThemedText>
           </TouchableOpacity>
         </>
       )}
 
       {isAndroid && showDatePicker && (
-        <DateTimePicker
-          value={selectedTime}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-        />
+        <DateTimePicker value={selectedTime} mode="date" display="default" onChange={handleDateChange} />
       )}
 
       {isAndroid && showTimePicker && tempDate && (
-        <DateTimePicker
-          value={tempDate}
-          mode="time"
-          display="default"
-          onChange={handleTimeChange}
-        />
+        <DateTimePicker value={tempDate} mode="time" display="default" onChange={handleTimeChange} />
       )}
     </View>
   );
@@ -187,53 +150,51 @@ export default function TimePicker({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: Spacing.xs,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: Spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   buttonRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: Spacing.sm,
   },
   nowButton: {
-    height: 50,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    height: 52,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  buttonText: {
+  nowText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   pickButton: {
     flex: 1,
-    height: 50,
-    borderRadius: 10,
-    paddingHorizontal: 15,
+    height: 52,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   timeText: {
     fontSize: 16,
-  },
-  icon: {
-    fontSize: 20,
+    fontWeight: '500',
   },
   doneButton: {
-    marginTop: 10,
-    padding: 15,
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
+    marginTop: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: Radius.md,
     alignItems: 'center',
   },
   doneText: {
-    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

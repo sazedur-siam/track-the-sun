@@ -15,11 +15,14 @@ export interface RouteWaypoint {
   bearing?: number;
 }
 
+/** Side of the vehicle, relative to the direction of travel. */
+export type Side = "left" | "right" | "neutral";
+
 export interface SunSplit {
-  eastPercentage: number;
-  westPercentage: number;
+  leftPercentage: number;
+  rightPercentage: number;
   details: WaypointSunData[];
-  recommendation: "east" | "west" | "neutral";
+  recommendation: Side;
   hasDirectSunlight: boolean;
 }
 
@@ -28,7 +31,7 @@ export interface WaypointSunData {
   sunAzimuth: number;
   busHeading: number;
   relativeAngle: number;
-  side: "east" | "west" | "neutral";
+  side: Side;
   sunAltitude: number;
 }
 

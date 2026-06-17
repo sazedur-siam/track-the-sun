@@ -339,13 +339,15 @@ export function AnimatedProgressCircle({
           </View>
       </View>
       
-      <ThemedText style={[
-          styles.label, 
-          isHot && { color: '#EF4444', fontWeight: '800' },
-          isCold && { color: '#0891B2', fontWeight: '800' }
-      ]}>
-        {isHot ? '🔥 ' : ''}{isCold ? '❄️ ' : ''}{label}
-      </ThemedText>
+      {label ? (
+        <ThemedText style={[
+            styles.label,
+            isHot && { color: '#EF4444', fontWeight: '800' },
+            isCold && { color: '#0891B2', fontWeight: '800' }
+        ]}>
+          {isHot ? '🔥 ' : ''}{isCold ? '❄️ ' : ''}{label}
+        </ThemedText>
+      ) : null}
     </Animated.View>
   );
 }

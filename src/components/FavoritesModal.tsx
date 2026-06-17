@@ -1,8 +1,10 @@
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { FavoriteRoute, deleteFavoriteRoute, getFavoriteRoutes } from '@/src/services/favoritesService';
+import { useTranslation } from '@/src/i18n/LanguageProvider';
+import { deleteFavoriteRoute, FavoriteRoute, getFavoriteRoutes } from '@/src/services/favoritesService';
 import { Location } from '@/src/types';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -13,42 +15,30 @@ interface FavoritesModalProps {
   onSelectFavorite: (from: Location, to: Location) => void;
 }
 
-export default function FavoritesModal({
-  visible,
-  onClose,
-  onSelectFavorite,
-}: FavoritesModalProps) {
+export default function FavoritesModal({ visible, onClose, onSelectFavorite }: FavoritesModalProps) {
   const [favorites, setFavorites] = useState<FavoriteRoute[]>([]);
-  const colorScheme = useColorScheme();
+  const theme = Colors[useColorScheme() ?? 'light'];
+  const { t } = useTranslation();
 
   useEffect(() => {
-    if (visible) {
-      loadFavorites();
-    }
+    if (visible) loadFavorites();
   }, [visible]);
 
-  const loadFavorites = async () => {
-    const data = await getFavoriteRoutes();
-    setFavorites(data);
-  };
+  const loadFavorites = async () => setFavorites(await getFavoriteRoutes());
 
   const handleDelete = async (id: string) => {
-    Alert.alert(
-      'Delete Favorite',
-      'Are you sure you want to remove this favorite route?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await deleteFavoriteRoute(id);
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            loadFavorites();
-          },
+    Alert.alert(t('favorites.deleteTitle'), t('favorites.deleteMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          await deleteFavoriteRoute(id);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          loadFavorites();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleSelect = (favorite: FavoriteRoute) => {
@@ -58,66 +48,62 @@ export default function FavoritesModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <ThemedView
-          style={[
-            styles.modalContent,
-            { backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#fff' },
-          ]}
-        >
-          <View style={styles.modalHeader}>
-            <ThemedText type="subtitle" style={styles.modalTitle}>
-              ⭐ Favorite Routes
-            </ThemedText>
-            <TouchableOpacity onPress={onClose}>
-              <ThemedText style={styles.closeButton}>✕</ThemedText>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
+        <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+          <View style={styles.grabber}>
+            <View style={[styles.grabberBar, { backgroundColor: theme.border }]} />
+          </View>
+
+          <View style={[styles.modalHeader, { borderBottomColor: theme.separator }]}>
+            <ThemedText type="subtitle">{t('favorites.title')}</ThemedText>
+            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('favorites.closeA11y')} hitSlop={8}>
+              <MaterialCommunityIcons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.favoritesList}>
+          <ScrollView contentContainerStyle={styles.favoritesList}>
             {favorites.length === 0 ? (
               <View style={styles.emptyState}>
-                <ThemedText style={styles.emptyStateText}>
-                  No favorite routes yet
-                </ThemedText>
-                <ThemedText style={styles.emptyStateSubtext}>
-                  Save your frequent routes for quick access
+                <MaterialCommunityIcons name="star-outline" size={40} color={theme.textMuted} />
+                <ThemedText style={[styles.emptyStateText, { color: theme.text }]}>{t('favorites.empty')}</ThemedText>
+                <ThemedText style={[styles.emptyStateSubtext, { color: theme.textMuted }]}>
+                  {t('favorites.emptySub')}
                 </ThemedText>
               </View>
             ) : (
               favorites.map((favorite) => (
-                <View key={favorite.id} style={styles.favoriteItem}>
+                <View
+                  key={favorite.id}
+                  style={[styles.favoriteItem, { backgroundColor: theme.inputBackground }]}
+                >
                   <TouchableOpacity
                     style={styles.favoriteContent}
                     onPress={() => handleSelect(favorite)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('favorites.useA11y', { name: favorite.name })}
                   >
-                    <ThemedText style={styles.favoriteName}>
-                      {favorite.name}
-                    </ThemedText>
-                    <ThemedText style={styles.favoriteDetails}>
+                    <ThemedText style={[styles.favoriteName, { color: theme.text }]}>{favorite.name}</ThemedText>
+                    <ThemedText style={[styles.favoriteDetails, { color: theme.textSecondary }]} numberOfLines={1}>
                       {favorite.fromLocation.name}
                     </ThemedText>
-                    <ThemedText style={styles.favoriteDetails}>
+                    <ThemedText style={[styles.favoriteDetails, { color: theme.textSecondary }]} numberOfLines={1}>
                       → {favorite.toLocation.name}
                     </ThemedText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.deleteButton}
                     onPress={() => handleDelete(favorite.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('favorites.deleteA11y', { name: favorite.name })}
                   >
-                    <ThemedText style={styles.deleteButtonText}>🗑️</ThemedText>
+                    <MaterialCommunityIcons name="trash-can-outline" size={22} color={theme.danger} />
                   </TouchableOpacity>
                 </View>
               ))
             )}
           </ScrollView>
-        </ThemedView>
+        </View>
       </View>
     </Modal>
   );
@@ -126,75 +112,68 @@ export default function FavoritesModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    paddingTop: Spacing.sm,
     maxHeight: '80%',
+  },
+  grabber: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  grabberBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  modalTitle: {
-    fontSize: 20,
-  },
-  closeButton: {
-    fontSize: 28,
-    opacity: 0.6,
   },
   favoritesList: {
-    padding: 20,
+    padding: Spacing.xl,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: Spacing.xxl,
+    gap: Spacing.sm,
   },
   emptyStateText: {
     fontSize: 16,
-    marginBottom: 8,
-    opacity: 0.7,
+    fontWeight: '600',
   },
   emptyStateSubtext: {
     fontSize: 14,
-    opacity: 0.5,
     textAlign: 'center',
   },
   favoriteItem: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    borderRadius: 12,
-    marginBottom: 12,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.md,
     overflow: 'hidden',
   },
   favoriteContent: {
     flex: 1,
-    padding: 16,
+    padding: Spacing.lg,
+    gap: Spacing.xs,
   },
   favoriteName: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
   },
   favoriteDetails: {
     fontSize: 14,
-    opacity: 0.7,
-    marginBottom: 4,
   },
   deleteButton: {
     justifyContent: 'center',
-    paddingHorizontal: 20,
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
-  },
-  deleteButtonText: {
-    fontSize: 24,
+    paddingHorizontal: Spacing.xl,
   },
 });

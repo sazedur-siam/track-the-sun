@@ -1,25 +1,28 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useDebounce } from '@/src/hooks/useDebounce';
+import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { searchLocation, SearchResult } from '@/src/services/geocodingService';
 import { Location } from '@/src/types';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Platform,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface LocationInputProps {
   label: string;
   placeholder: string;
-  onLocationSelect: (location: Location) => void;
+  onLocationSelect: (location: Location | null) => void;
   selectedLocation: Location | null;
 }
 
@@ -29,113 +32,137 @@ export default function LocationInput({
   onLocationSelect,
   selectedLocation,
 }: LocationInputProps) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(selectedLocation?.name ?? '');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const debouncedQuery = useDebounce(query, 600);
+  const debouncedQuery = useDebounce(query, 500);
+  const requestId = useRef(0);
   const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
+  const { t } = useTranslation();
+
+  // Keep the field text in sync when the selection is set from outside
+  // (swap, favorites, current location).
+  useEffect(() => {
+    if (selectedLocation && selectedLocation.name !== query) {
+      setQuery(selectedLocation.name);
+      setShowResults(false);
+      setResults([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLocation]);
 
   useEffect(() => {
-    if (debouncedQuery.trim().length < 3) {
+    const q = debouncedQuery.trim();
+    // Skip when too short or when the text already matches the chosen place.
+    if (q.length < 3 || q === selectedLocation?.name) {
       setResults([]);
+      setShowResults(false);
       return;
     }
 
+    const id = ++requestId.current;
     setIsSearching(true);
     searchLocation(debouncedQuery)
       .then((data) => {
+        if (id !== requestId.current) return; // ignore stale responses
         setResults(data);
-        setShowResults(true);
+        setShowResults(data.length > 0);
       })
-      .finally(() => setIsSearching(false));
-  }, [debouncedQuery]);
+      .finally(() => {
+        if (id === requestId.current) setIsSearching(false);
+      });
+  }, [debouncedQuery, selectedLocation]);
+
+  const handleChangeText = (text: string) => {
+    setQuery(text);
+    // Editing invalidates a previously chosen location.
+    if (selectedLocation) onLocationSelect(null);
+  };
 
   const handleSelectLocation = (result: SearchResult) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onLocationSelect({
-      lat: result.lat,
-      lng: result.lng,
-      name: result.displayName,
-    });
+    requestId.current++; // cancel any in-flight search
+    onLocationSelect({ lat: result.lat, lng: result.lng, name: result.displayName });
     setQuery(result.displayName);
     setShowResults(false);
     setResults([]);
-    // Dismiss keyboard
-    if (Platform.OS !== 'web') {
-      require('react-native').Keyboard.dismiss();
-    }
+    Keyboard.dismiss();
   };
 
   const handleClear = () => {
+    requestId.current++;
     setQuery('');
     setResults([]);
     setShowResults(false);
-    onLocationSelect(null as any);
+    setIsSearching(false);
+    onLocationSelect(null);
   };
+
+  const hasValue = query.length > 0;
 
   return (
     <View style={styles.container}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
-      
+      <ThemedText style={[styles.label, { color: theme.textSecondary }]}>{label}</ThemedText>
+
       <View style={styles.inputContainer}>
         <TextInput
           style={[
             styles.input,
-            {
-              backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f2f2f7',
-              color: colorScheme === 'dark' ? '#fff' : '#000',
-            },
-            isSearching && styles.inputSearching,
+            { backgroundColor: theme.inputBackground, color: theme.text },
           ]}
           placeholder={placeholder}
-          placeholderTextColor={colorScheme === 'dark' ? '#8e8e93' : '#8e8e93'}
-          value={selectedLocation ? selectedLocation.name : query}
-          onChangeText={setQuery}
+          placeholderTextColor={theme.placeholder}
+          value={query}
+          onChangeText={handleChangeText}
           onFocus={() => {
             if (results.length > 0) setShowResults(true);
           }}
+          accessibilityLabel={t('location.fieldA11y', { label })}
+          returnKeyType="search"
         />
-        
-        {isSearching && (
-          <ActivityIndicator
-            style={styles.searchingIndicator}
-            color="#007AFF"
-            size="large"
-          />
-        )}
-        
-        {(selectedLocation || query) && !isSearching && (
-          <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-            <ThemedText style={styles.clearText}>✕</ThemedText>
-          </TouchableOpacity>
+
+        {isSearching ? (
+          <ActivityIndicator style={styles.trailingIcon} color={theme.primary} size="small" />
+        ) : (
+          hasValue && (
+            <TouchableOpacity
+              onPress={handleClear}
+              style={styles.trailingIcon}
+              accessibilityRole="button"
+              accessibilityLabel={t('location.clearA11y', { label })}
+              hitSlop={8}
+            >
+              <MaterialCommunityIcons name="close-circle" size={20} color={theme.textMuted} />
+            </TouchableOpacity>
+          )
         )}
       </View>
 
-      {isSearching && (
-        <View style={styles.loadingContainer}>
-          <ThemedText style={styles.loadingText}>🔍 Searching...</ThemedText>
-        </View>
-      )}
-
       {showResults && results.length > 0 && (
-        <ThemedView style={styles.resultsContainer}>
+        <ThemedView
+          style={[styles.resultsContainer, { backgroundColor: theme.card, borderColor: theme.border }]}
+        >
           <FlatList
             data={results}
             keyExtractor={(item, index) => `${item.lat}-${item.lng}-${index}`}
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={styles.resultItem}
+                style={[styles.resultItem, { borderBottomColor: theme.separator }]}
                 onPress={() => handleSelectLocation(item)}
+                accessibilityRole="button"
+                accessibilityLabel={item.displayName}
               >
-                <ThemedText style={styles.resultText} numberOfLines={2}>
+                <MaterialCommunityIcons name="map-marker-outline" size={18} color={theme.textMuted} />
+                <ThemedText style={[styles.resultText, { color: theme.text }]} numberOfLines={2}>
                   {item.displayName}
                 </ThemedText>
               </TouchableOpacity>
             )}
             style={styles.resultsList}
             scrollEnabled={false}
-            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
           />
         </ThemedView>
       )}
@@ -145,70 +172,55 @@ export default function LocationInput({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
     position: 'relative',
     zIndex: 1,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: Spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   inputContainer: {
     position: 'relative',
+    justifyContent: 'center',
   },
   input: {
-    height: 50,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingRight: 50,
+    height: 52,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingRight: 44,
     fontSize: 16,
   },
-  inputSearching: {
-    opacity: 0.7,
-  },
-  searchingIndicator: {
+  trailingIcon: {
     position: 'absolute',
-    right: 12,
-    top: 8,
-  },
-  loadingContainer: {
-    marginTop: 8,
-    marginBottom: 5,
-  },
-  loadingText: {
-    fontSize: 14,
-    opacity: 0.7,
-    fontStyle: 'italic',
-  },
-  clearButton: {
-    position: 'absolute',
-    right: 15,
-    top: 15,
-    width: 20,
-    height: 20,
+    right: Spacing.md,
+    height: 24,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  clearText: {
-    fontSize: 20,
-    opacity: 0.5,
-  },
   resultsContainer: {
-    marginTop: 5,
-    borderRadius: 10,
-    maxHeight: 200,
+    marginTop: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    maxHeight: 220,
     overflow: 'hidden',
   },
   resultsList: {
-    maxHeight: 200,
+    maxHeight: 220,
   },
   resultItem: {
-    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ccc',
   },
   resultText: {
+    flex: 1,
     fontSize: 14,
   },
 });

@@ -1,28 +1,31 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import CurrentLocationButton from '@/src/components/CurrentLocationButton';
 import FavoritesModal from '@/src/components/FavoritesModal';
+import LanguagePicker from '@/src/components/LanguagePicker';
 import LocationInput from '@/src/components/LocationInput';
 import NameInputModal from '@/src/components/NameInputModal';
 import SunAnimation from '@/src/components/SunAnimation';
 import TimePicker from '@/src/components/TimePicker';
+import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { fetchRoute } from '@/src/services/routingService';
 import { Location } from '@/src/types';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function HomeScreen() {
@@ -34,12 +37,10 @@ export default function HomeScreen() {
   const [showNameInput, setShowNameInput] = useState(false);
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-
-  const handleDepartureTimeChange = (time: Date) => {
-    setDepartureTime(time);
-  };
+  const { t } = useTranslation();
 
   const canCalculate = fromLocation !== null && toLocation !== null && !isCalculating;
+  const hasBothLocations = fromLocation !== null && toLocation !== null;
 
   const handleCalculate = async () => {
     if (!canCalculate || !fromLocation || !toLocation) return;
@@ -48,19 +49,14 @@ export default function HomeScreen() {
     setIsCalculating(true);
 
     try {
-      // Fetch route from OSRM
       const route = await fetchRoute(fromLocation, toLocation, departureTime);
 
       if (!route) {
-        Alert.alert(
-          'Route Not Found',
-          'Unable to find a route between these locations. Please try different locations.'
-        );
+        Alert.alert(t('home.routeNotFoundTitle'), t('home.routeNotFoundMsg'));
         setIsCalculating(false);
         return;
       }
 
-      // Navigate to results screen with route data
       router.push({
         pathname: '/route-result',
         params: {
@@ -71,10 +67,7 @@ export default function HomeScreen() {
         },
       });
     } catch {
-      Alert.alert(
-        'Error',
-        'Failed to calculate route. Please check your internet connection and try again.'
-      );
+      Alert.alert(t('common.error'), t('home.errorMsg'));
     } finally {
       setIsCalculating(false);
     }
@@ -82,14 +75,8 @@ export default function HomeScreen() {
 
   const handleSwapLocations = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const temp = fromLocation;
     setFromLocation(toLocation);
-    setToLocation(temp);
-  };
-
-  const handleSaveFavorite = async () => {
-    if (!fromLocation || !toLocation) return;
-    setShowNameInput(true);
+    setToLocation(fromLocation);
   };
 
   const handleSaveWithName = async (name: string) => {
@@ -98,10 +85,10 @@ export default function HomeScreen() {
     try {
       await saveFavoriteRoute(fromLocation, toLocation, name);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Saved', 'Route saved to favorites!');
+      Alert.alert(t('home.savedTitle'), t('home.savedMsg'));
       setShowNameInput(false);
     } catch {
-      Alert.alert('Error', 'Failed to save favorite route.');
+      Alert.alert(t('common.error'), t('home.saveErrorMsg'));
     }
   };
 
@@ -119,124 +106,153 @@ export default function HomeScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
+          {/* Language picker */}
+          <View style={styles.topBar}>
+            <LanguagePicker />
+          </View>
+
           {/* Header */}
           <View style={styles.header}>
             <SunAnimation />
             <ThemedText type="title" style={styles.title}>
               TrackTheSun
             </ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Find the shady side of your journey
+            <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
+              {t('common.tagline')}
             </ThemedText>
           </View>
 
           {/* Main Card */}
-          <View style={[styles.mainCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-             
-               {/* Current Location Button */}
+          <View
+            style={[
+              styles.mainCard,
+              { backgroundColor: theme.card, shadowColor: theme.shadow },
+              Shadows.md,
+            ]}
+          >
+            {/* Quick actions */}
             <View style={styles.sectionHeader}>
-                 <CurrentLocationButton onLocationSelect={setFromLocation} />
-                 <TouchableOpacity
-                    style={[styles.favoritesButton, { backgroundColor: theme.secondary }]}
-                    onPress={() => setShowFavorites(true)}
-                    >
-                    <ThemedText style={styles.favoritesButtonText}>⭐ Favorites</ThemedText>
-                </TouchableOpacity>
+              <CurrentLocationButton onLocationSelect={setFromLocation} />
+              <TouchableOpacity
+                style={[styles.chipButton, { backgroundColor: theme.accentSoft }]}
+                onPress={() => setShowFavorites(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('home.favoritesA11y')}
+              >
+                <MaterialCommunityIcons name="star" size={16} color={theme.warning} />
+                <ThemedText style={[styles.chipText, { color: theme.text }]}>{t('home.favorites')}</ThemedText>
+              </TouchableOpacity>
             </View>
 
-            {/* From Location */}
-            <LocationInput
-                label="From"
-                placeholder="Search starting location..."
+            {/* From / To with swap */}
+            <View>
+              <LocationInput
+                label={t('home.from')}
+                placeholder={t('home.searchFrom')}
                 onLocationSelect={setFromLocation}
                 selectedLocation={fromLocation}
-            />
+              />
 
-            {/* Swap Button */}
-            {(fromLocation || toLocation) && (
-                <View style={styles.swapContainer}>
-                <TouchableOpacity
-                    style={[styles.swapButton, { backgroundColor: theme.primary }]}
+              {(fromLocation || toLocation) && (
+                <View style={styles.swapContainer} pointerEvents="box-none">
+                  <TouchableOpacity
+                    style={[
+                      styles.swapButton,
+                      { backgroundColor: theme.primary, borderColor: theme.card },
+                    ]}
                     onPress={handleSwapLocations}
-                >
-                    <ThemedText style={styles.swapIcon}>⇅</ThemedText>
-                </TouchableOpacity>
+                    accessibilityRole="button"
+                    accessibilityLabel={t('home.swapA11y')}
+                  >
+                    <MaterialCommunityIcons name="swap-vertical" size={22} color={theme.onPrimary} />
+                  </TouchableOpacity>
                 </View>
-            )}
+              )}
 
-            {/* To Location */}
-            <LocationInput
-                label="To"
-                placeholder="Search destination..."
+              <LocationInput
+                label={t('home.to')}
+                placeholder={t('home.searchTo')}
                 onLocationSelect={setToLocation}
                 selectedLocation={toLocation}
-            />
+              />
+            </View>
 
-            {/* Departure Time */}
             <TimePicker
-                label="Departure Time"
-                selectedTime={departureTime}
-                onTimeChange={handleDepartureTimeChange}
+              label={t('home.departureTime')}
+              selectedTime={departureTime}
+              onTimeChange={setDepartureTime}
             />
           </View>
 
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
-            {/* Save Favorite Button */}
-            {fromLocation && toLocation && (
-                <TouchableOpacity
-                style={[styles.saveFavoriteButton, { backgroundColor: theme.secondary }]}
-                onPress={handleSaveFavorite}
-                >
-                <ThemedText style={styles.saveFavoriteText}>💾 Save Route</ThemedText>
-                </TouchableOpacity>
+            {hasBothLocations && (
+              <TouchableOpacity
+                style={[styles.saveFavoriteButton, { backgroundColor: theme.inputBackground }]}
+                onPress={() => setShowNameInput(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('home.saveA11y')}
+              >
+                <MaterialCommunityIcons name="bookmark-outline" size={20} color={theme.text} />
+                <ThemedText style={[styles.saveFavoriteText, { color: theme.text }]}>{t('common.save')}</ThemedText>
+              </TouchableOpacity>
             )}
 
-            {/* Calculate Button */}
             <TouchableOpacity
-                style={[
+              style={[
                 styles.calculateButton,
-                { backgroundColor: canCalculate ? theme.primary : theme.icon },
-                ]}
-                onPress={handleCalculate}
-                disabled={!canCalculate}
+                { backgroundColor: canCalculate ? theme.primary : theme.inputBackground },
+                canCalculate && { shadowColor: theme.shadow, ...Shadows.md },
+              ]}
+              onPress={handleCalculate}
+              disabled={!canCalculate}
+              accessibilityRole="button"
+              accessibilityLabel={t('home.findSeat')}
+              accessibilityState={{ disabled: !canCalculate, busy: isCalculating }}
             >
-                {isCalculating ? (
+              {isCalculating ? (
                 <View style={styles.calculatingContainer}>
-                    <ActivityIndicator color="#fff" size="small" />
-                    <ThemedText style={[styles.calculateButtonText, { color: theme.secondary }]}>
-                    Tracing Sun...
-                    </ThemedText>
+                  <ActivityIndicator color={theme.onPrimary} size="small" />
+                  <ThemedText style={[styles.calculateButtonText, { color: theme.onPrimary }]}>
+                    {t('home.tracingSun')}
+                  </ThemedText>
                 </View>
-                ) : (
-                <ThemedText style={[styles.calculateButtonText, { color: canCalculate ? '#111827' : '#fff' }]}>
-                    Calculate Sun Exposure
+              ) : (
+                <ThemedText
+                  style={[
+                    styles.calculateButtonText,
+                    { color: canCalculate ? theme.onPrimary : theme.textMuted },
+                  ]}
+                >
+                  {t('home.findSeat')}
                 </ThemedText>
-                )}
+              )}
             </TouchableOpacity>
           </View>
 
-          {/* Helper Text */}
-          {isCalculating && (
-            <ThemedText style={styles.helperText}>
-              🗺️ Integrating with OSRM & SunCalc...
+          {!hasBothLocations && (
+            <ThemedText style={[styles.helperText, { color: theme.textMuted }]}>
+              {t('home.helper')}
             </ThemedText>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Favorites Modal */}
       <FavoritesModal
         visible={showFavorites}
         onClose={() => setShowFavorites(false)}
         onSelectFavorite={handleLoadFavorite}
       />
 
-      {/* Name Input Modal */}
       <NameInputModal
         visible={showNameInput}
-        defaultName={fromLocation && toLocation ? `${fromLocation.name.split(',')[0]} → ${toLocation.name.split(',')[0]}` : ''}
+        defaultName={
+          fromLocation && toLocation
+            ? `${fromLocation.name.split(',')[0]} → ${toLocation.name.split(',')[0]}`
+            : ''
+        }
         onSave={handleSaveWithName}
         onCancel={() => setShowNameInput(false)}
       />
@@ -252,71 +268,53 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
-    paddingBottom: 40,
+    padding: Spacing.xl,
+    paddingBottom: Spacing.xxl + Spacing.lg,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: Spacing.xs,
   },
   header: {
-    marginTop: 20,
-    marginBottom: 30,
+    marginBottom: Spacing.xl,
     alignItems: 'center',
   },
   title: {
-    fontSize: 36,
-    fontWeight: '800',
-    marginBottom: 8,
-    letterSpacing: -1,
+    marginBottom: Spacing.xs,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
+    fontSize: 15,
     textAlign: 'center',
-    marginBottom: 10,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: Spacing.sm,
   },
   mainCard: {
-    borderRadius: 24,
-    padding: 24,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: 20,
-    gap: 16,
+    borderRadius: Radius.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+    gap: Spacing.lg,
   },
-  favoritesButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+  chipButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.pill,
   },
-  favoritesButtonText: {
-    color: '#fff',
+  chipText: {
     fontSize: 14,
     fontWeight: '600',
   },
-  saveFavoriteButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginRight: 10,
-    alignItems: 'center',
-  },
-  saveFavoriteText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
   swapContainer: {
     alignItems: 'center',
-    marginVertical: -16,
+    marginVertical: -Spacing.lg - 2,
     zIndex: 10,
   },
   swapButton: {
@@ -326,20 +324,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#fff', // White border to separate from inputs
   },
-  swapIcon: {
-    fontSize: 24,
-    color: '#023047', // Secondary color
-    fontWeight: 'bold',
+  actionButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
   },
-  calculateButton: {
-    flex: 2,
-    paddingVertical: 18,
-    borderRadius: 16,
+  saveFavoriteButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.lg,
+  },
+  saveFavoriteText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  calculateButton: {
+    flex: 1,
+    paddingVertical: 18,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   calculateButtonText: {
     fontSize: 16,
@@ -349,13 +357,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: Spacing.sm,
   },
   helperText: {
     fontSize: 13,
-    opacity: 0.6,
     textAlign: 'center',
-    marginTop: 20,
-    fontStyle: 'italic',
+    marginTop: Spacing.lg,
   },
 });
