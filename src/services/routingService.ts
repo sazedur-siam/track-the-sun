@@ -102,10 +102,25 @@ export async function fetchRoute(
     // Decode polyline to get coordinates
     const coordinates = decodePolyline(geometry);
 
-    // Create waypoints with timestamps
+    // Cumulative distance along the route, so timestamps track real progress.
+    // (Polyline points are NOT equidistant, so interpolating by index would
+    // misplace *when* the vehicle is at each point.)
+    const cumulativeDistances: number[] = [0];
+    for (let i = 1; i < coordinates.length; i++) {
+      const [prevLat, prevLng] = coordinates[i - 1];
+      const [lat, lng] = coordinates[i];
+      const segment = haversineDistance(prevLat, prevLng, lat, lng);
+      cumulativeDistances.push(cumulativeDistances[i - 1] + segment);
+    }
+    const totalGeometryDistance =
+      cumulativeDistances[cumulativeDistances.length - 1] || 0;
+
+    // Create waypoints with timestamps based on distance progress
     const waypoints: RouteWaypoint[] = coordinates.map((coord, index) => {
-      // Calculate time offset for this waypoint
-      const progress = index / (coordinates.length - 1);
+      const progress =
+        totalGeometryDistance > 0
+          ? cumulativeDistances[index] / totalGeometryDistance
+          : 0;
       const timeOffset = progress * duration * 1000; // milliseconds
       const timestamp = new Date(departureTime.getTime() + timeOffset);
 
@@ -125,6 +140,27 @@ export async function fetchRoute(
     console.error("Routing error:", error);
     return null;
   }
+}
+
+/**
+ * Great-circle distance between two points, in meters (haversine).
+ */
+function haversineDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /**
@@ -157,26 +193,34 @@ export function calculateBearing(
 /**
  * Format distance for display
  * @param meters - Distance in meters
+ * @param units - Localized unit labels (defaults to English "km"/"m")
  * @returns Formatted string (e.g., "5.2 km" or "850 m")
  */
-export function formatDistance(meters: number): string {
+export function formatDistance(
+  meters: number,
+  units: { km: string; m: string } = { km: 'km', m: 'm' },
+): string {
   if (meters >= 1000) {
-    return `${(meters / 1000).toFixed(1)} km`;
+    return `${(meters / 1000).toFixed(1)} ${units.km}`;
   }
-  return `${Math.round(meters)} m`;
+  return `${Math.round(meters)} ${units.m}`;
 }
 
 /**
  * Format duration for display
  * @param seconds - Duration in seconds
+ * @param units - Localized unit labels (defaults to English "h"/"m")
  * @returns Formatted string (e.g., "1h 23m" or "15m")
  */
-export function formatDuration(seconds: number): string {
+export function formatDuration(
+  seconds: number,
+  units: { hour: string; min: string } = { hour: 'h', min: 'm' },
+): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
 
   if (hours > 0) {
-    return `${hours}h ${minutes}m`;
+    return `${hours}${units.hour} ${minutes}${units.min}`;
   }
-  return `${minutes}m`;
+  return `${minutes}${units.min}`;
 }

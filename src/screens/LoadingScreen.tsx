@@ -1,72 +1,37 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import SunAnimation from '@/src/components/SunAnimation';
+import { useTranslation } from '@/src/i18n/LanguageProvider';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
-import Animated, {
-      useAnimatedStyle,
-      useSharedValue,
-      withRepeat,
-      withSequence,
-      withTiming,
-} from 'react-native-reanimated';
 
 interface LoadingScreenProps {
   onLoadComplete?: () => void;
 }
 
 export default function LoadingScreen({ onLoadComplete }: LoadingScreenProps) {
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.5);
+  const theme = Colors[useColorScheme() ?? 'light'];
+  const { t } = useTranslation();
 
   useEffect(() => {
-    // Animate sun icon
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.2, { duration: 1000 }),
-        withTiming(1, { duration: 1000 })
-      ),
-      -1,
-      false
-    );
-
-    opacity.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1000 }),
-        withTiming(0.5, { duration: 1000 })
-      ),
-      -1,
-      false
-    );
-
-    // Simulate loading time (2 seconds)
     const timer = setTimeout(() => {
-      if (onLoadComplete) {
-        onLoadComplete();
-      }
-    }, 2000);
-
+      onLoadComplete?.();
+    }, 1800);
     return () => clearTimeout(timer);
-  }, [onLoadComplete, scale, opacity]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-      opacity: opacity.value,
-    };
-  });
+  }, [onLoadComplete]);
 
   return (
     <ThemedView style={styles.container}>
-      <Animated.View style={[styles.iconContainer, animatedStyle]}>
-        <ThemedText style={styles.sunIcon}>☀️</ThemedText>
-      </Animated.View>
+      <SunAnimation />
       <ThemedText type="title" style={styles.title}>
         TrackTheSun
       </ThemedText>
-      <ThemedText style={styles.subtitle}>
-        Find the cool side of your journey
+      <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
+        {t('common.tagline')}
       </ThemedText>
-      <ActivityIndicator size="large" color="#FFA500" style={styles.spinner} />
+      <ActivityIndicator size="large" color={theme.primary} style={styles.spinner} />
     </ThemedView>
   );
 }
@@ -76,26 +41,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-  },
-  iconContainer: {
-    marginBottom: 20,
-  },
-  sunIcon: {
-    fontSize: 40,
+    padding: Spacing.xl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: Spacing.sm,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 40,
+    fontSize: 15,
+    marginBottom: Spacing.xxl,
     textAlign: 'center',
   },
   spinner: {
-    marginTop: 20,
+    marginTop: Spacing.lg,
   },
 });

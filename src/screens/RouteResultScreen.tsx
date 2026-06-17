@@ -1,106 +1,107 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { AnimatedProgressCircle } from '@/src/components/AnimatedProgressCircle';
 import BusDiagram from '@/src/components/BusDiagram';
+import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
-import { calculateSunExposure, SunExposureResult } from '@/src/services/sunCalcService';
+import { calculateSunExposure } from '@/src/services/sunCalcService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Alert, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function RouteResultScreen() {
   const params = useLocalSearchParams();
-  const [sunData, setSunData] = useState<SunExposureResult | null>(null);
-  const [isCalculating, setIsCalculating] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  
-  // Parse route data from params
-  let route: Route | null = null;
-  try {
-    if (params.route) {
-      const parsedRoute = JSON.parse(params.route as string);
-      // Restore Date objects from strings
-      if (parsedRoute.waypoints) {
-        parsedRoute.waypoints = parsedRoute.waypoints.map((wp: any) => ({
+  const { t } = useTranslation();
+
+  const fromName = params.fromName as string;
+  const toName = params.toName as string;
+
+  // Parse the route once per param change instead of on every render.
+  const route = useMemo<Route | null>(() => {
+    if (!params.route) return null;
+    try {
+      const parsed = JSON.parse(params.route as string);
+      if (parsed.waypoints) {
+        parsed.waypoints = parsed.waypoints.map((wp: any) => ({
           ...wp,
           timestamp: new Date(wp.timestamp),
         }));
       }
-      route = parsedRoute;
-    }
-  } catch (e) {
-    console.error('Failed to parse route:', e);
-  }
-
-  const fromName = params.fromName as string;
-  const toName = params.toName as string;
-  const departureTime = params.departureTime ? new Date(params.departureTime as string) : new Date();
-
-  useEffect(() => {
-    if (route && route.waypoints) {
-      setIsCalculating(true);
-      // Small delay to show loading state
-      setTimeout(() => {
-        const result = calculateSunExposure(route.waypoints);
-        setSunData(result);
-        setIsCalculating(false);
-        // Success haptic feedback
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Fade in animation
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }).start();
-      }, 500);
+      return parsed;
+    } catch (e) {
+      console.error('Failed to parse route:', e);
+      return null;
     }
   }, [params.route]);
 
+  const departureTime = useMemo(
+    () => (params.departureTime ? new Date(params.departureTime as string) : new Date()),
+    [params.departureTime]
+  );
+
+  const sunData = useMemo(
+    () => (route?.waypoints ? calculateSunExposure(route.waypoints) : null),
+    [route]
+  );
+
+  useEffect(() => {
+    if (!sunData) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 450,
+      useNativeDriver: true,
+    }).start();
+  }, [sunData, fadeAnim]);
+
   const handleSaveRoute = async () => {
     if (!route?.waypoints?.length) return;
-    
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const fromLocation = {
+    const from = {
       lat: route.waypoints[0].lat,
       lng: route.waypoints[0].lng,
-      name: fromName || "Start Location"
+      name: fromName || 'Start Location',
     };
-
-    const toLocation = {
+    const to = {
       lat: route.waypoints[route.waypoints.length - 1].lat,
       lng: route.waypoints[route.waypoints.length - 1].lng,
-      name: toName || "Destination"
+      name: toName || 'Destination',
     };
 
     try {
-      await saveFavoriteRoute(fromLocation, toLocation);
-      Alert.alert('Saved', 'Route has been added to your favorites.');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save route.');
+      await saveFavoriteRoute(from, to);
+      Alert.alert(t('result.savedTitle'), t('result.savedMsg'));
+    } catch {
+      Alert.alert(t('common.error'), t('result.saveErrorMsg'));
     }
   };
 
-  if (!route) {
+  if (!route || !sunData) {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.errorContainer}>
-          <ThemedText type="title">❌ No Route Found</ThemedText>
-          <ThemedText style={styles.errorText}>
-            Unable to calculate route. Please try again.
+          <MaterialCommunityIcons name="map-marker-off" size={48} color={theme.textMuted} />
+          <ThemedText type="title" style={styles.errorTitle}>
+            {t('result.noRouteTitle')}
+          </ThemedText>
+          <ThemedText style={[styles.errorText, { color: theme.textSecondary }]}>
+            {t('result.noRouteText')}
           </ThemedText>
           <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: theme.primary }]}
+            style={[styles.backButton, { backgroundColor: theme.primary, shadowColor: theme.shadow }, Shadows.md]}
             onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={t('result.goBackA11y')}
           >
-            <ThemedText style={styles.backButtonText}>Go Back</ThemedText>
+            <ThemedText style={[styles.backButtonText, { color: theme.onPrimary }]}>{t('result.goBack')}</ThemedText>
           </TouchableOpacity>
         </View>
       </ThemedView>
@@ -108,7 +109,6 @@ export default function RouteResultScreen() {
   }
 
   const arrivalTime = new Date(departureTime.getTime() + route.duration * 1000);
-
   const formatTime = (date: Date) => {
     const hours = date.getHours();
     const minutes = date.getMinutes();
@@ -118,188 +118,165 @@ export default function RouteResultScreen() {
     return `${displayHours}:${displayMinutes} ${ampm}`;
   };
 
+  const recommends = sunData.recommendation !== 'neutral';
+  const sitIcon = sunData.recommendation === 'left' ? 'arrow-left-bold' : 'arrow-right-bold';
+
+  // Build the localized recommendation summary from structured fields.
+  let summary: string;
+  if (!sunData.hasDirectSunlight) {
+    summary = t('result.summaryNoSun');
+  } else if (!recommends) {
+    summary = t('result.summaryBalanced');
+  } else {
+    const sunSide = sunData.recommendation === 'left' ? 'right' : 'left';
+    const percent = sunSide === 'left' ? sunData.leftPercentage : sunData.rightPercentage;
+    const params2 = {
+      sit: t(`side.${sunData.recommendation}`),
+      sun: t(`side.${sunSide}`),
+      percent,
+    };
+    summary = sunData.sunnySideCompass
+      ? t('result.summaryRecommend', {
+          ...params2,
+          facing: t(`compassFull.${sunData.sunnySideCompass}`),
+        })
+      : t('result.summaryRecommendNoFacing', params2);
+  }
+
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.titleRow}>
-            <ThemedText type="title" style={styles.title}>
-              Analysis Result
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Animated.View style={{ opacity: fadeAnim }}>
+          {/* Hero recommendation */}
+          {!sunData.hasDirectSunlight ? (
+            <View style={[styles.hero, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.md]}>
+              <ThemedText style={styles.heroEmoji}>🌙</ThemedText>
+              <ThemedText type="subtitle" style={styles.heroTitle}>
+                {t('result.eitherSide')}
+              </ThemedText>
+              <ThemedText style={[styles.heroSubtitle, { color: theme.textSecondary }]}>
+                {summary}
+              </ThemedText>
+            </View>
+          ) : recommends ? (
+            <View style={[styles.hero, { backgroundColor: theme.primary, shadowColor: theme.shadow }, Shadows.lg]}>
+              <ThemedText style={[styles.heroLabel, { color: theme.onPrimary }]}>{t('result.recommendedSeat')}</ThemedText>
+              <View style={styles.heroSeatRow}>
+                <MaterialCommunityIcons name={sitIcon} size={36} color={theme.onPrimary} />
+                <ThemedText style={[styles.heroSeat, { color: theme.onPrimary }]}>
+                  {t('result.sitOnSide', { side: t(`side.${sunData.recommendation}`) })}
+                </ThemedText>
+              </View>
+              <ThemedText style={[styles.heroSubtitle, { color: theme.onPrimary, opacity: 0.85 }]}>
+                {summary}
+              </ThemedText>
+            </View>
+          ) : (
+            <View style={[styles.hero, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.md]}>
+              <ThemedText style={styles.heroEmoji}>⚖️</ThemedText>
+              <ThemedText type="subtitle" style={styles.heroTitle}>
+                {t('result.balancedExposure')}
+              </ThemedText>
+              <ThemedText style={[styles.heroSubtitle, { color: theme.textSecondary }]}>
+                {summary}
+              </ThemedText>
+            </View>
+          )}
+
+          {/* Sun on each side */}
+          {sunData.hasDirectSunlight && (
+            <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}>
+              <ThemedText type="subtitle" style={styles.cardTitle}>
+                {t('result.sunEachSide')}
+              </ThemedText>
+
+              <BusDiagram
+                leftPercentage={sunData.leftPercentage}
+                rightPercentage={sunData.rightPercentage}
+                recommendation={sunData.recommendation}
+                sunnySide={sunData.sunnySide}
+                sunnySideCompass={sunData.sunnySideCompass}
+              />
+            </View>
+          )}
+
+          {/* Journey details */}
+          <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}>
+            <ThemedText type="subtitle" style={styles.cardTitle}>
+              {t('result.journey')}
             </ThemedText>
-            <TouchableOpacity 
-              onPress={handleSaveRoute}
-              style={[styles.saveButton, { backgroundColor: theme.card }]}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons name="bookmark-plus-outline" size={24} color={theme.primary} />
-              <ThemedText style={[styles.saveText, { color: theme.primary }]}>Save</ThemedText>
-            </TouchableOpacity>
+
+            <View style={styles.journeyRow}>
+              <MaterialCommunityIcons name="circle-outline" size={18} color={theme.secondary} />
+              <ThemedText style={[styles.journeyText, { color: theme.text }]} numberOfLines={2}>
+                {fromName}
+              </ThemedText>
+            </View>
+            <View style={[styles.journeyConnector, { backgroundColor: theme.border }]} />
+            <View style={styles.journeyRow}>
+              <MaterialCommunityIcons name="map-marker" size={18} color={theme.primary} />
+              <ThemedText style={[styles.journeyText, { color: theme.text }]} numberOfLines={2}>
+                {toName}
+              </ThemedText>
+            </View>
+
+            <View style={[styles.statsGrid, { borderTopColor: theme.separator }]}>
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatDistance(route.distance, { km: t('units.km'), m: t('units.m') })}
+                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: theme.textMuted }]}>{t('result.distance')}</ThemedText>
+              </View>
+              <View style={[styles.statDivider, { backgroundColor: theme.separator }]} />
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statValue, { color: theme.primary }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatDuration(route.duration, { hour: t('units.hour'), min: t('units.min') })}
+                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: theme.textMuted }]}>{t('result.travelTime')}</ThemedText>
+              </View>
+              <View style={[styles.statDivider, { backgroundColor: theme.separator }]} />
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatTime(departureTime)}
+                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: theme.textMuted }]}>{t('result.departure')}</ThemedText>
+              </View>
+              <View style={[styles.statDivider, { backgroundColor: theme.separator }]} />
+              <View style={styles.statItem}>
+                <ThemedText style={[styles.statValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatTime(arrivalTime)}
+                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: theme.textMuted }]}>{t('result.arrival')}</ThemedText>
+              </View>
+            </View>
+
+            <ThemedText style={[styles.disclaimerText, { color: theme.textMuted }]}>
+              {t('result.disclaimer')}
+            </ThemedText>
           </View>
+        </Animated.View>
+
+        {/* Actions */}
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.secondaryButton, { backgroundColor: theme.inputBackground }]}
+            onPress={handleSaveRoute}
+            accessibilityRole="button"
+            accessibilityLabel={t('result.saveA11y')}
+          >
+            <MaterialCommunityIcons name="bookmark-outline" size={20} color={theme.text} />
+            <ThemedText style={[styles.secondaryButtonText, { color: theme.text }]}>{t('common.save')}</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.backButton, { backgroundColor: theme.primary, shadowColor: theme.shadow }, Shadows.md]}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={t('result.newSearchA11y')}
+          >
+            <ThemedText style={[styles.backButtonText, { color: theme.onPrimary }]}>{t('result.newSearch')}</ThemedText>
+          </TouchableOpacity>
         </View>
-
-        {isCalculating ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.primary} />
-            <ThemedText style={styles.loadingText}>
-              Calculating sun position...
-            </ThemedText>
-          </View>
-        ) : sunData ? (
-          <Animated.View style={{ opacity: fadeAnim }}>
-            {/* Sun Exposure Results */}
-            <View style={[styles.card, { borderColor: theme.primary, borderWidth: 2 }]}>
-              <ThemedText type="subtitle" style={styles.cardTitle}>
-                Direct Sun Percentage
-              </ThemedText>
-
-              {sunData.hasDirectSunlight ? (
-                <>
-                  <View style={styles.percentageContainer}>
-                    <AnimatedProgressCircle
-                      percentage={sunData.eastPercentage}
-                      color={theme.primary}
-                      textColor="#111827"
-                      label="East Side"
-                      delay={100}
-                      size={80}
-                      isHot={sunData.eastPercentage > sunData.westPercentage}
-                      isCold={sunData.eastPercentage < sunData.westPercentage}
-                    />
-
-                    <ThemedText style={styles.percentageVs}>vs</ThemedText>
-
-                    <AnimatedProgressCircle
-                      percentage={sunData.westPercentage}
-                      color={theme.secondary}
-                      textColor={colorScheme === 'dark' ? '#111827' : '#FFFFFF'}
-                      label="West Side"
-                      delay={500}
-                      size={80}
-                      isHot={sunData.westPercentage > sunData.eastPercentage}
-                      isCold={sunData.westPercentage < sunData.eastPercentage}
-                    />
-                  </View>
-
-                  {/* Recommendation */}
-                  {sunData.recommendation !== 'neutral' && (
-                    <View style={[styles.recommendationBox, { backgroundColor: theme.card }]}>
-                      <ThemedText style={styles.recommendationIcon}>✨</ThemedText>
-                      <ThemedText style={[styles.recommendationTitle, { color: theme.primary }]}>
-                        Recommendation
-                      </ThemedText>
-                      <ThemedText style={styles.recommendationText}>
-                        {sunData.summary}
-                      </ThemedText>
-                    </View>
-                  )}
-
-                  {sunData.recommendation === 'neutral' && (
-                    <View style={[styles.recommendationBox, { backgroundColor: theme.card }]}>
-                      <ThemedText style={styles.neutralText}>
-                        {sunData.summary}
-                      </ThemedText>
-                    </View>
-                  )}
-                </>
-              ) : (
-                <View style={styles.noSunCard}>
-                  <ThemedText style={styles.noSunIcon}>🌙</ThemedText>
-                  <ThemedText style={styles.noSunText}>
-                    {sunData.summary}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-
-            {/* Bus Diagram */}
-            {sunData.hasDirectSunlight && (
-              <View style={[styles.card, { backgroundColor: theme.card }]}>
-                <BusDiagram
-                  eastPercentage={sunData.eastPercentage}
-                  westPercentage={sunData.westPercentage}
-                  recommendation={sunData.recommendation}
-                />
-              </View>
-            )}
-
-            {/* Route Details */}
-            <View style={[styles.card, { backgroundColor: theme.card }]}>
-              <ThemedText type="subtitle" style={styles.cardTitle}>
-                📍 Journey Details
-              </ThemedText>
-              
-              <View style={styles.locationRow}>
-                <ThemedText style={styles.label}>From</ThemedText>
-                <ThemedText style={styles.value} numberOfLines={2}>
-                  {fromName}
-                </ThemedText>
-              </View>
-
-              <View style={styles.locationRow}>
-                <ThemedText style={styles.label}>To</ThemedText>
-                <ThemedText style={styles.value} numberOfLines={2}>
-                  {toName}
-                </ThemedText>
-              </View>
-            </View>
-
-            {/* Time & Distance */}
-            <View style={[styles.card, { backgroundColor: theme.card }]}>
-              <ThemedText type="subtitle" style={styles.cardTitle}>
-                ⏱️ Time & Distance
-              </ThemedText>
-
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
-                  <ThemedText style={[styles.statValue, { color: theme.primary }]}>
-                    {formatDistance(route.distance)}
-                  </ThemedText>
-                  <ThemedText style={styles.statLabel}>Distance</ThemedText>
-                </View>
-
-                <View style={styles.statItem}>
-                  <ThemedText style={[styles.statValue, { color: theme.secondary }]}>
-                    {formatDuration(route.duration)}
-                  </ThemedText>
-                  <ThemedText style={styles.statLabel}>Est. Duration*</ThemedText>
-                </View>
-              </View>
-
-              <ThemedText style={styles.disclaimerText}>
-                *Duration is estimated based on typical speeds and does not account for real-time traffic conditions.
-              </ThemedText>
-
-              <View style={[styles.timeRow, { borderTopColor: theme.border }]}>
-                <View style={styles.timeItem}>
-                  <ThemedText style={styles.timeLabel}>Departure</ThemedText>
-                  <ThemedText style={styles.timeValue}>
-                    {formatTime(departureTime)}
-                  </ThemedText>
-                </View>
-
-                <ThemedText style={styles.timeArrow}>→</ThemedText>
-
-                <View style={styles.timeItem}>
-                  <ThemedText style={styles.timeLabel}>Arrival</ThemedText>
-                  <ThemedText style={styles.timeValue}>
-                    {formatTime(arrivalTime)}
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          </Animated.View>
-        ) : null}
-
-        {/* Back Button */}
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: theme.secondary }]}
-          onPress={() => router.back()}
-        >
-          <ThemedText style={[styles.backButtonText, { color: colorScheme === 'dark' ? '#111827' : '#FFFFFF' }]}>
-            Start New Search
-          </ThemedText>
-        </TouchableOpacity>
       </ScrollView>
     </ThemedView>
   );
@@ -310,203 +287,144 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
-    paddingTop: 40,
-    paddingBottom: 60,
+    padding: Spacing.xl,
+    paddingBottom: Spacing.xxl + Spacing.lg,
   },
-  header: {
-    marginBottom: 20,
-  },
-  titleRow: {
-    flexDirection: 'row',
+  hero: {
+    borderRadius: Radius.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
   },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'transparent',
+  heroEmoji: {
+    fontSize: 40,
+    marginBottom: Spacing.sm,
   },
-  saveText: {
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  title: {
-    fontSize: 28,
+  heroLabel: {
+    fontSize: 12,
     fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: Spacing.sm,
+    opacity: 0.8,
   },
-  loadingContainer: {
-    padding: 60,
+  heroSeatRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
-  loadingText: {
-    fontSize: 16,
-    marginTop: 20,
-    opacity: 0.7,
+  heroSeat: {
+    fontSize: 22,
+    fontWeight: '800',
+    flexShrink: 1,
+  },
+  heroTitle: {
+    marginBottom: Spacing.xs,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   card: {
-    padding: 24,
-    borderRadius: 24,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    padding: Spacing.xl,
+    borderRadius: Radius.xl,
+    marginBottom: Spacing.lg,
   },
   cardTitle: {
-    fontSize: 18,
-    marginBottom: 20,
-    fontWeight: '700',
+    marginBottom: Spacing.lg,
     textAlign: 'center',
   },
-  percentageContainer: {
+  journeyRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 20,
-    overflow: 'visible',
+    gap: Spacing.md,
   },
-  percentageVs: {
-    fontSize: 28,
-    opacity: 0.5,
-    fontWeight: '600',
+  journeyConnector: {
+    width: 2,
+    height: 18,
+    marginLeft: 8,
+    marginVertical: 2,
   },
-  recommendationBox: {
-    padding: 24,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  recommendationIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  recommendationTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  recommendationText: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-    opacity: 0.9,
-  },
-  neutralText: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.8,
-  },
-  noSunCard: {
-    padding: 30,
-    alignItems: 'center',
-  },
-  noSunIcon: {
-    fontSize: 24,
-    marginBottom: 16,
-  },
-  noSunText: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.8,
-    lineHeight: 24,
-  },
-  locationRow: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 12,
-    opacity: 0.5,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 4,
-    fontWeight: '700',
-  },
-  value: {
-    fontSize: 16,
+  journeyText: {
+    flex: 1,
+    fontSize: 15,
     fontWeight: '600',
   },
   statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '800',
-  },
-  statLabel: {
-    fontSize: 13,
-    opacity: 0.7,
-    marginTop: 4,
-  },
-  disclaimerText: {
-    fontSize: 12,
-    opacity: 0.6,
-    textAlign: 'center',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    fontStyle: 'italic',
-  },
-  timeRow: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 16,
     borderTopWidth: 1,
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.lg,
   },
-  timeItem: {
+  statItem: {
     flex: 1,
     alignItems: 'center',
   },
-  timeLabel: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginBottom: 4,
+  statDivider: {
+    width: 1,
+    height: 32,
   },
-  timeValue: {
+  statValue: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  timeArrow: {
-    fontSize: 20,
-    marginHorizontal: 10,
-    opacity: 0.3,
+  statLabel: {
+    fontSize: 11,
+    marginTop: Spacing.xs,
+    textAlign: 'center',
+  },
+  disclaimerText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: Spacing.lg,
+    lineHeight: 17,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.xs,
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: 18,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.lg,
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   backButton: {
-    paddingVertical: 20,
-    borderRadius: 20,
-    marginTop: 10,
+    flex: 1,
+    paddingVertical: 18,
+    borderRadius: Radius.lg,
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    justifyContent: 'center',
   },
   backButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    textAlign: 'center',
   },
   errorContainer: {
-    padding: 24,    
-    alignItems: 'center'
+    flex: 1,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 400,
+    gap: Spacing.md,
+  },
+  errorTitle: {
+    textAlign: 'center',
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
-    marginVertical: 16,
-    opacity: 0.7
-  }
+    marginBottom: Spacing.sm,
+  },
 });

@@ -1,123 +1,135 @@
 import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AnimatedProgressCircle } from '@/src/components/AnimatedProgressCircle';
+import { useTranslation } from '@/src/i18n/LanguageProvider';
+import { Side } from '@/src/services/sunCalcService';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 interface BusDiagramProps {
-  eastPercentage: number;
-  westPercentage: number;
-  recommendation: 'east' | 'west' | 'neutral';
+  leftPercentage: number;
+  rightPercentage: number;
+  recommendation: Side;
+  /** Side the sun is predominantly on. */
+  sunnySide?: Side;
+  /** Compass direction the sunny side faces, e.g. "W". */
+  sunnySideCompass?: string | null;
 }
 
-export default function BusDiagram({
-  eastPercentage,
-  westPercentage,
-  recommendation,
-}: BusDiagramProps) {
-  const colorScheme = useColorScheme();
-  const theme = Colors[colorScheme ?? 'light'];
+const CIRCLE_SIZE = 56;
+const COLUMN_WIDTH = CIRCLE_SIZE * 2; // matches AnimatedProgressCircle's wrapper box
+const BUS_WIDTH = 58;
+const HOT_COLOR = '#EF4444';
+const COLD_COLOR = '#0891B2';
 
-  const getIntensity = (percentage: number) => {
-    if (percentage > 70) return 0.8;
-    if (percentage > 40) return 0.5;
-    if (percentage > 10) return 0.2;
-    return 0.05;
+export default function BusDiagram({
+  leftPercentage,
+  rightPercentage,
+  recommendation,
+  sunnySide,
+  sunnySideCompass,
+}: BusDiagramProps) {
+  const theme = Colors[useColorScheme() ?? 'light'];
+  const { t } = useTranslation();
+
+  const leftHot = leftPercentage > rightPercentage;
+  const rightHot = rightPercentage > leftPercentage;
+
+  const compassSuffix = (side: Side) =>
+    sunnySide === side && sunnySideCompass ? ` (${t(`compassShort.${sunnySideCompass}`)})` : '';
+
+  const renderLabel = (side: 'left' | 'right', hot: boolean) => {
+    const cold = !hot && leftPercentage !== rightPercentage;
+    const color = hot ? HOT_COLOR : cold ? COLD_COLOR : theme.textSecondary;
+    return (
+      <ThemedText style={[styles.sideLabel, { color }]}>
+        {hot ? '🔥 ' : cold ? '❄️ ' : ''}
+        {t(`diagram.${side}`)}
+        {compassSuffix(side)}
+      </ThemedText>
+    );
   };
 
-  const eastIntensity = getIntensity(eastPercentage);
-  const westIntensity = getIntensity(westPercentage);
+  const renderBadge = (side: Side) =>
+    recommendation === side ? (
+      <View style={[styles.seatBadge, { backgroundColor: theme.success }]}>
+        <MaterialCommunityIcons name="check" size={13} color="#FFFFFF" />
+        <ThemedText style={styles.seatBadgeText}>{t('diagram.sitHere')}</ThemedText>
+      </View>
+    ) : null;
 
   return (
     <View style={styles.container}>
-      <ThemedText style={styles.label}>Bus Side View</ThemedText>
-      
-      <View style={styles.busContainer}>
-        {/* West Side (Left) */}
-        <View style={styles.sideContainer}>
-          <ThemedText style={styles.sideLabel}>West</ThemedText>
-           <View style={[
-              styles.busSide,
-              styles.sideOutline,
-              {
-                borderColor: recommendation === 'west' ? theme.secondary : theme.border,
-                borderWidth: recommendation === 'west' ? 3 : 1,
-                backgroundColor: 'transparent'
-              }
-           ]}>
-              <View style={[
-                StyleSheet.absoluteFill, 
-                { 
-                  backgroundColor: theme.primary, 
-                  opacity: westIntensity, 
-                  borderRadius: 6 
-                }
-              ]} />
-              {westPercentage > 0 && (
-                <ThemedText style={styles.sunIcon}>
-                  {westPercentage > 50 ? '☀️☀️' : '☀️'}
-                </ThemedText>
-              )}
-           </View>
+      {/* Travel-direction hint so "left" / "right" is unambiguous */}
+      <View style={styles.frontHint}>
+        <MaterialCommunityIcons name="chevron-up" size={18} color={theme.textMuted} />
+        <ThemedText style={[styles.frontText, { color: theme.textMuted }]}>{t('diagram.front')}</ThemedText>
+      </View>
 
-          {recommendation === 'west' && (
-            <ThemedText style={[styles.recommendBadge, { color: theme.secondary }]}>✓ Sit here</ThemedText>
-          )}
+      {/* Circles + bus, all aligned on one center line */}
+      <View style={styles.diagramRow}>
+        <View style={styles.circleSlot}>
+          <AnimatedProgressCircle
+            percentage={leftPercentage}
+            color={theme.primary}
+            textColor={theme.onPrimary}
+            label=""
+            delay={100}
+            size={CIRCLE_SIZE}
+            isHot={leftHot}
+            isCold={!leftHot && leftPercentage !== rightPercentage}
+          />
         </View>
 
-        {/* Bus Body */}
-        <View style={styles.busBody}>
-          <View style={[styles.busFront, { backgroundColor: theme.primary }]} />
-          <View style={[styles.busMiddle, { backgroundColor: theme.primary }]}>
-            <View style={[styles.window, { backgroundColor: '#E2E8F0' }]} />
-            <View style={[styles.window, { backgroundColor: '#E2E8F0' }]} />
-            <View style={[styles.window, { backgroundColor: '#E2E8F0' }]} />
+        <View style={[styles.busBody, { height: COLUMN_WIDTH }]}>
+          <View style={[styles.busFront, { backgroundColor: theme.secondary }]} />
+          <View style={[styles.busMiddle, { backgroundColor: theme.secondary }]}>
+            <View style={[styles.window, { backgroundColor: 'rgba(255,255,255,0.85)' }]} />
+            <View style={[styles.window, { backgroundColor: 'rgba(255,255,255,0.85)' }]} />
+            <View style={[styles.window, { backgroundColor: 'rgba(255,255,255,0.85)' }]} />
+            <ThemedText style={styles.busEmoji}>🚌</ThemedText>
           </View>
-          <View style={[styles.busBack, { backgroundColor: theme.primary }]} />
-          <ThemedText style={styles.busLabel}>🚌</ThemedText>
+          <View style={[styles.busBack, { backgroundColor: theme.secondary }]} />
         </View>
 
-        {/* East Side (Right) */}
-        <View style={styles.sideContainer}>
-          <ThemedText style={styles.sideLabel}>East</ThemedText>
-           <View style={[
-              styles.busSide,
-              styles.sideOutline,
-              {
-                borderColor: recommendation === 'east' ? theme.secondary : theme.border,
-                borderWidth: recommendation === 'east' ? 3 : 1,
-                backgroundColor: 'transparent'
-              }
-           ]}>
-              <View style={[
-                StyleSheet.absoluteFill, 
-                { 
-                  backgroundColor: theme.primary, 
-                  opacity: eastIntensity, 
-                  borderRadius: 6 
-                }
-              ]} />
-              {/* Sun Icon Logic */}
-              {eastPercentage > 0 && (
-                <ThemedText style={styles.sunIcon}>
-                  {eastPercentage > 50 ? '☀️☀️' : '☀️'}
-                </ThemedText>
-              )}
-           </View>
-          {recommendation === 'east' && (
-            <ThemedText style={[styles.recommendBadge, { color: theme.secondary }]}>✓ Sit here</ThemedText>
-          )}
+        <View style={styles.circleSlot}>
+          <AnimatedProgressCircle
+            percentage={rightPercentage}
+            color={theme.secondary}
+            textColor={theme.onSecondary}
+            label=""
+            delay={400}
+            size={CIRCLE_SIZE}
+            isHot={rightHot}
+            isCold={!rightHot && leftPercentage !== rightPercentage}
+          />
         </View>
       </View>
 
+      {/* Labels + recommended badge, aligned under each column */}
+      <View style={styles.labelsRow}>
+        <View style={styles.labelCol}>
+          {renderLabel('left', leftHot)}
+          {renderBadge('left')}
+        </View>
+        <View style={styles.busSpacer} />
+        <View style={styles.labelCol}>
+          {renderLabel('right', rightHot)}
+          {renderBadge('right')}
+        </View>
+      </View>
+
+      {/* Legend */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
-          <ThemedText style={styles.legendText}>Sun intensity (Yellow)</ThemedText>
+          <ThemedText style={[styles.legendText, { color: theme.textSecondary }]}>{t('diagram.legendSun')}</ThemedText>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.borderDot, { borderColor: theme.secondary }]} />
-          <ThemedText style={styles.legendText}>Recommended Seat</ThemedText>
+          <View style={[styles.legendDot, { backgroundColor: theme.success }]} />
+          <ThemedText style={[styles.legendText, { color: theme.textSecondary }]}>{t('diagram.legendSeat')}</ThemedText>
         </View>
       </View>
     </View>
@@ -126,111 +138,111 @@ export default function BusDiagram({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    alignItems: 'center',
   },
-  label: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    textAlign: 'center',
+  frontHint: {
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
   },
-  busContainer: {
+  frontText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  diagramRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
   },
-  sideContainer: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  sideLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    opacity: 0.6,
-  },
-  busSide: {
-    width: 60,
-    height: 120,
-    borderRadius: 8,
+  circleSlot: {
+    width: COLUMN_WIDTH,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
-  sideOutline: {
-    borderStyle: 'solid',
+  labelsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: Spacing.sm,
   },
-  sunIcon: {
-    fontSize: 24,
-    zIndex: 1,
-    textShadowColor: 'rgba(0,0,0,0.1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+  labelCol: {
+    width: COLUMN_WIDTH,
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  recommendBadge: {
+  busSpacer: {
+    width: BUS_WIDTH,
+  },
+  sideLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  seatBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+  },
+  seatBadgeText: {
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '800',
-    textTransform: 'uppercase',
   },
   busBody: {
-    width: 80,
-    height: 140,
-    justifyContent: 'space-between',
+    width: BUS_WIDTH,
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   busFront: {
-    width: 70,
-    height: 20,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+    width: 50,
+    height: 16,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   busMiddle: {
-    width: 70,
-    height: 80,
-    gap: 8,
-    paddingVertical: 8,
+    width: 50,
+    flex: 1,
+    gap: 7,
+    paddingVertical: 9,
     alignItems: 'center',
   },
   window: {
-    width: 50,
-    height: 16,
-    borderRadius: 4,
+    width: 34,
+    height: 12,
+    borderRadius: 3,
   },
   busBack: {
-    width: 70,
-    height: 20,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
+    width: 50,
+    height: 16,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
   },
-  busLabel: {
-    fontSize: 28,
+  busEmoji: {
     position: 'absolute',
-    top: '45%',
+    top: '52%',
+    fontSize: 20,
   },
   legend: {
-    marginTop: 20,
-    gap: 8,
-    alignItems: 'center', 
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.lg,
+    marginTop: Spacing.lg,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
   },
   legendDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
   },
-  borderDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 4,
-    borderWidth: 2,
-    backgroundColor: 'transparent',
-  },
   legendText: {
-    fontSize: 14,
-    opacity: 0.7,
+    fontSize: 13,
   },
 });
