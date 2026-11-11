@@ -3,10 +3,12 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import BusDiagram from '@/src/components/BusDiagram';
+import DepartureChart from '@/src/components/DepartureChart';
 import ExposureTimeline from '@/src/components/ExposureTimeline';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
-import { getRoute, parseRouteResultParams, RouteResultParams } from '@/src/services/routeStore';
+import { bestWindow, scanDepartures, shiftRoute } from '@/src/services/departurePlanner';
+import { getRoute, parseRouteResultParams, putRoute, RouteResultParams } from '@/src/services/routeStore';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
 import { planRoute } from '@/src/services/settingsService';
 import { calculateSunExposure } from '@/src/services/sunCalcService';
@@ -79,6 +81,20 @@ export default function RouteResultScreen() {
   );
 
   const timeline = useMemo(() => (sunData ? buildTimeline(sunData.waypointDetails) : []), [sunData]);
+
+  // Best time to leave: same route, departures every 15 min within ±3 h.
+  const slots = useMemo(
+    () => (route ? scanDepartures(route, departureTime, { mode }) : []),
+    [route, departureTime, mode]
+  );
+  const best = useMemo(() => bestWindow(slots, mode), [slots, mode]);
+
+  const handleSelectDeparture = (departure: Date) => {
+    if (!route) return;
+    // Reuse the geometry with shifted timestamps; no new network request.
+    const routeId = putRoute(shiftRoute(route, departure));
+    router.setParams({ routeId, departureTime: departure.toISOString() });
+  };
 
   useEffect(() => {
     if (!sunData) return;
@@ -279,6 +295,22 @@ export default function RouteResultScreen() {
                 {t('timeline.title')}
               </ThemedText>
               <ExposureTimeline runs={timeline} />
+            </View>
+          )}
+
+          {/* Best time to leave */}
+          {slots.some((s) => s.hasSun) && (
+            <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}>
+              <ThemedText type="subtitle" style={styles.cardTitle}>
+                {t('best.title')}
+              </ThemedText>
+              <DepartureChart
+                slots={slots}
+                best={best}
+                current={departureTime}
+                mode={mode}
+                onSelect={handleSelectDeparture}
+              />
             </View>
           )}
 

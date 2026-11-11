@@ -268,16 +268,13 @@ export function calculateSunExposure(
     );
 
     // Calculate sun position
-    const sunAzimuth = getSunAzimuth(
-      current.lat,
-      current.lng,
-      current.timestamp,
-    );
+    // One suncalc call per segment (this runs many times for departure scans).
     const position = getSunPosition(
       current.lat,
       current.lng,
       current.timestamp,
     );
+    const sunAzimuth = ((position.azimuth * 180) / Math.PI + 180) % 360;
     const sunAltitude = (position.altitude * 180) / Math.PI;
 
     // Check if sun is above horizon

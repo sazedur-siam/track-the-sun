@@ -5,7 +5,6 @@ These are planned features, one per file. **When a feature ships, its file is de
 | # | Feature | Value | Effort | Depends on |
 | --- | --- | --- | --- | --- |
 | 01 | [Route map with sun-side colouring](01-route-map.md) | High | M–L | — |
-| 02 | [Best time to leave](02-best-departure-time.md) | High | M | — |
 | 06 | [Train, walking and other travel modes](06-travel-modes.md) | Medium–High | M–L | — |
 | 07 | [Share a result](07-share-result.md) | Medium | S–M | — |
 
@@ -16,11 +15,11 @@ Effort: **S** ≈ under 1 day, **M** ≈ 1–3 days, **L** ≈ 3+ days.
 - 04 Seek-the-sun mode
 - 05 Glare-aware weighting by sun height
 - 03 Sun exposure timeline
+- 02 Best time to leave
 
 ## Suggested order
 
-1. **02 Best time to leave.** It reuses the route geometry, so it needs no extra network calls.
-2. **01 Map**, **07 Share**, **06 Travel modes.**
+1. **01 Map**, **07 Share**, **06 Travel modes.**
 
 ## Adding a feature file
 

@@ -194,6 +194,20 @@ export const translations: Record<Language, Record<string, string>> = {
     'timeline.neutral': 'No side sun',
     'timeline.a11y': 'Timeline of which side the sun is on during the trip',
 
+    // Best time to leave
+    'best.title': 'Best time to leave',
+    'best.shadiest': 'Least sun: leave between {start} and {end}',
+    'best.sunniest': 'Most sun: leave between {start} and {end}',
+    'best.shadiestAt': 'Least sun: leave at {time}',
+    'best.sunniestAt': 'Most sun: leave at {time}',
+    'best.noSun': 'No direct sun at any of these times.',
+    'best.best': 'Best time',
+    'best.current': 'Your time',
+    'best.hint': 'Tap a bar to see that time.',
+    'best.footnote': 'Bar height is the sun on the sunnier side. Travel time is assumed to stay the same.',
+    'best.slotA11y': 'Leave at {time}: {score}% sun',
+    'best.slotNightA11y': 'Leave at {time}: no direct sun',
+
     // Settings
     'nav.settings': 'Settings',
     'settings.title': 'Settings',
@@ -418,6 +432,20 @@ export const translations: Record<Language, Record<string, string>> = {
     'timeline.right': 'রোদ ডান দিকে',
     'timeline.neutral': 'পাশে রোদ নেই',
     'timeline.a11y': 'যাত্রার সময় রোদ কোন দিকে থাকবে তার সময়রেখা',
+
+    // Best time to leave
+    'best.title': 'রওনা দেওয়ার সেরা সময়',
+    'best.shadiest': 'সবচেয়ে কম রোদ: {start} থেকে {end}-এর মধ্যে রওনা দিন',
+    'best.sunniest': 'সবচেয়ে বেশি রোদ: {start} থেকে {end}-এর মধ্যে রওনা দিন',
+    'best.shadiestAt': 'সবচেয়ে কম রোদ: {time}-এ রওনা দিন',
+    'best.sunniestAt': 'সবচেয়ে বেশি রোদ: {time}-এ রওনা দিন',
+    'best.noSun': 'এই সময়গুলোর কোনোটিতেই সরাসরি রোদ নেই।',
+    'best.best': 'সেরা সময়',
+    'best.current': 'আপনার সময়',
+    'best.hint': 'কোনো সময় দেখতে একটি বারে চাপুন।',
+    'best.footnote': 'বারের উচ্চতা হলো বেশি রোদের দিকের রোদ। যাত্রার সময়কাল একই ধরা হয়েছে।',
+    'best.slotA11y': '{time}-এ রওনা: {score}% রোদ',
+    'best.slotNightA11y': '{time}-এ রওনা: সরাসরি রোদ নেই',
 
     // Settings
     'nav.settings': 'সেটিংস',
