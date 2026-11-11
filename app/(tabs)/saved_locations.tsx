@@ -11,7 +11,7 @@ import {
   resolveDepartureTime,
 } from '@/src/services/favoritesService';
 import { buildRouteResultParams, putRoute } from '@/src/services/routeStore';
-import { fetchRoute } from '@/src/services/routingService';
+import { planRoute } from '@/src/services/settingsService';
 import { formatClock } from '@/src/utils/time';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -66,7 +66,7 @@ export default function SavedLocationsScreen() {
     try {
       // Use the saved time of day (today), or "now" for routes saved without one.
       const departureTime = resolveDepartureTime(favorite.departureTime);
-      const route = await fetchRoute(favorite.fromLocation, favorite.toLocation, departureTime);
+      const route = await planRoute(favorite.fromLocation, favorite.toLocation, departureTime);
       if (!route) {
         Alert.alert(t('saved.routeNotFoundTitle'), t('saved.routeNotFoundMsg'));
         return;

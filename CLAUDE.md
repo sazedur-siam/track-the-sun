@@ -23,7 +23,18 @@ Run `npm test && npm run lint && npm run typecheck` before you call a change don
 - `expo-router` v6 for file-based routing, with typed routes on
 - `react-native-reanimated` v4 plus the RN `Animated` API, `expo-haptics`, `expo-location`
 - `@react-native-async-storage/async-storage` for persistence
-- Free APIs only, with no keys: OSRM `router.project-osrm.org` for routing and Nominatim for geocoding
+- Routing has two providers, chosen in the Settings tab:
+  - **OSRM**: free public server `router.project-osrm.org`, no key, no traffic
+  - **Google Maps Platform Routes API** (`routes.googleapis.com/directions/v2:computeRoutes`): live traffic, needs a key. The legacy Directions API is **not** enabled on the key.
+- Geocoding uses Nominatim (free, no key).
+
+## Google API key
+
+- The built-in key comes from `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` in `.env.local`. That file is gitignored; `.env.example` is the template. Restart `expo start` after changing it.
+- Users can paste their own key in Settings ("Test & save"). It is stored in AsyncStorage and **overrides** the built-in key. "Remove my key" goes back to the built-in one.
+- **Never commit a real key**, including in tests. Tests use obvious fakes like `FAKE-user-key-0002`.
+- `EXPO_PUBLIC_*` values are bundled into the app, so the key can be extracted. Restrict it in Google Cloud Console (Routes API only, plus quotas). For EAS builds, set it with `eas env:create`, because `.env.local` isn't uploaded.
+- Read it only as `process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` (dot access, literal name). Expo inlines it at build time, and the lint rule `expo/no-dynamic-env-var` enforces this.
 
 ## Layout
 
@@ -33,12 +44,14 @@ Two folder trees exist side by side:
   - `_layout.tsx`: root Stack wrapped in `LanguageProvider` and the navigation `ThemeProvider`
   - `(tabs)/index.tsx`: `LoadingScreen` (1.8 s), then `HomeScreen`
   - `(tabs)/saved_locations.tsx`: saved routes list. This screen's logic lives in the route file itself.
+  - `(tabs)/settings.tsx`: re-exports `src/screens/SettingsScreen` (route provider + Google key)
   - `route-result.tsx`: header plus `RouteResultScreen`
 - `src/` holds the app code.
   - `screens/`: `HomeScreen`, `RouteResultScreen`, `LoadingScreen`
   - `components/`: LocationInput (debounced Nominatim autocomplete), CurrentLocationButton, TimePicker, BusDiagram, FavoritesModal, NameInputModal, LanguagePicker, SunAnimation, AnimatedProgressCircle
   - `services/`: pure logic with no React
-    - `routingService.ts`: OSRM fetch, polyline decode, distance-weighted waypoint timestamps, bearing, format helpers
+    - `routingService.ts`: `requestOsrmRoute` / `requestGoogleRoute` (each throws `RoutingError` with a `code`), and `fetchRoute(…, { provider, googleApiKey })`, which **falls back from Google to OSRM** and records it in `route.fallback`. Also `testGoogleApiKey`, `buildWaypoints` (distance-weighted timestamps), polyline decode, bearing and format helpers.
+    - `settingsService.ts`: saved provider and user key (AsyncStorage), `effectiveGoogleKey`, `maskKey`, and **`planRoute()`**. Screens call `planRoute`, never `fetchRoute` directly.
     - `sunCalcService.ts`: `calculateSunExposure()`, the core algorithm
     - `geocodingService.ts`: Nominatim search and reverse geocoding
     - `favoritesService.ts`: AsyncStorage CRUD for saved routes. Stores an optional `departureTime` as a local "HH:mm" time of day; `resolveDepartureTime()` turns it into today's date.
@@ -86,6 +99,8 @@ Waypoint timestamps are interpolated by **cumulative distance**, not by point in
 - `SunAvoidance` ("avoid" | "seek") in `src/types.ts` is unused (see `docs/features/04-seek-sun-mode.md`).
 - The Nominatim usage policy limits requests to 1 per second and asks for a meaningful User-Agent. Search is debounced in `LocationInput`.
 - The public OSRM server only serves the driving profile.
+- Google rejects departure times in the past. `requestGoogleRoute` then switches to `TRAFFIC_UNAWARE`. Traffic-aware requests are billed at a higher Google tier than traffic-unaware ones.
+- `Route.provider`, `trafficAware` and `fallback` are shown on the result screen. Keep them accurate when adding providers.
 - Deleting a route file while `expo start` is running can crash the Metro watcher. Restart it.
 
 ## Git

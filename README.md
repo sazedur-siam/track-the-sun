@@ -8,16 +8,17 @@ TrackTheSun is an Expo / React Native app. You pick where you're going and when 
 
 - 🔎 **Location search** with autocomplete (OpenStreetMap / Nominatim) and **use my current location**
 - 🕒 **Departure time** picker ("Now" or any date and time)
+- 🗺️ **Two route providers**: free **OSRM**, or **Google Maps** (Routes API, live traffic) with your API key. If Google fails, the app switches to OSRM automatically.
 - 🧭 **Sun-side analysis**: works out the sun's position for every part of the route, weighted by distance
 - 🚌 **Clear recommendation**: which side to sit on, what share of the trip each side is in the sun, and the compass direction the sunny side faces
 - ⭐ **Saved routes** that remember your usual departure time
 - 🌗 **Light and dark mode**
 - 🇬🇧 🇧🇩 **English and Bangla**
-- 🆓 **No API keys**: uses only free, open services
+- 🆓 **Works without any API key**: Google Maps is optional
 
 ## How it works
 
-1. **Route.** The app asks [OSRM](https://project-osrm.org/) for the driving route and decodes its path. Each point gets an expected time based on how far along the route it is.
+1. **Route.** The app gets the driving route from [OSRM](https://project-osrm.org/) or the [Google Routes API](https://developers.google.com/maps/documentation/routes), whichever is chosen in Settings, and decodes its path. Each point gets an expected time based on how far along the route it is. Google's times include traffic, so they are usually closer to reality on busy roads.
 2. **Sun.** For each part of the route, [`suncalc`](https://github.com/mourner/suncalc) gives the sun's direction and height at that place and time.
 3. **Side.** The app compares the sun's direction with the direction of travel:
    - sun to the right → sun on the right side
@@ -31,7 +32,7 @@ TrackTheSun is an Expo / React Native app. You pick where you're going and when 
 | --- | --- |
 | Framework | Expo SDK 54, React Native 0.81, React 19 (New Architecture and React Compiler) |
 | Navigation | `expo-router` (file-based, typed routes) |
-| Routing API | OSRM public server |
+| Routing API | OSRM public server, or Google Maps Routes API (optional, with automatic fallback) |
 | Geocoding | Nominatim / OpenStreetMap |
 | Sun maths | `suncalc` |
 | Storage | `@react-native-async-storage/async-storage` |
@@ -42,8 +43,17 @@ TrackTheSun is an Expo / React Native app. You pick where you're going and when 
 
 ```bash
 npm install
+cp .env.example .env.local   # optional: add a Google Maps key (Routes API)
 npm start          # then press i (iOS), a (Android), w (web), or scan the QR code with Expo Go
 ```
+
+### Google Maps key (optional)
+
+1. In Google Cloud Console, enable the **Routes API**. Create an API key and restrict it to that API.
+2. Put it in `.env.local` as `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=…`, then restart `npm start`.
+3. Or paste a key in the app under **Settings → Google Maps API key → Test & save**. A key entered there replaces the built-in one, which helps when the built-in key expires.
+
+Keys in `EXPO_PUBLIC_*` variables are bundled into the app, so always restrict the key. For EAS builds, set the variable with `eas env:create`.
 
 Other scripts:
 

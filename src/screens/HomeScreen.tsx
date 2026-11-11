@@ -12,7 +12,7 @@ import TimePicker from '@/src/components/TimePicker';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { FavoriteRoute, resolveDepartureTime, saveFavoriteRoute } from '@/src/services/favoritesService';
 import { buildRouteResultParams, putRoute } from '@/src/services/routeStore';
-import { fetchRoute } from '@/src/services/routingService';
+import { planRoute } from '@/src/services/settingsService';
 import { Location } from '@/src/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -50,7 +50,7 @@ export default function HomeScreen() {
     setIsCalculating(true);
 
     try {
-      const route = await fetchRoute(fromLocation, toLocation, departureTime);
+      const route = await planRoute(fromLocation, toLocation, departureTime);
 
       if (!route) {
         Alert.alert(t('home.routeNotFoundTitle'), t('home.routeNotFoundMsg'));

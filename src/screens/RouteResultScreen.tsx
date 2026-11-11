@@ -6,7 +6,8 @@ import BusDiagram from '@/src/components/BusDiagram';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { getRoute, parseRouteResultParams, RouteResultParams } from '@/src/services/routeStore';
-import { fetchRoute, formatDistance, formatDuration, Route } from '@/src/services/routingService';
+import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
+import { planRoute } from '@/src/services/settingsService';
 import { calculateSunExposure } from '@/src/services/sunCalcService';
 import { formatClock } from '@/src/utils/time';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -48,7 +49,7 @@ export default function RouteResultScreen() {
   useEffect(() => {
     if (storedRoute || !from || !to) return;
     let cancelled = false;
-    fetchRoute(from, to, departureTime).then((result) => {
+    planRoute(from, to, departureTime).then((result) => {
       if (!cancelled) setFetched({ key: fetchKey, route: result });
     });
     return () => {
@@ -159,6 +160,29 @@ export default function RouteResultScreen() {
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
+          {/* Google failed → we fell back to OSRM */}
+          {route.fallback && (
+            <View style={[styles.fallbackBanner, { backgroundColor: theme.accentSoft }]} accessibilityRole="alert">
+              <MaterialCommunityIcons name="alert-outline" size={22} color={theme.warning} />
+              <View style={styles.fallbackBody}>
+                <ThemedText style={[styles.fallbackTitle, { color: theme.text }]}>{t('result.fallbackTitle')}</ThemedText>
+                <ThemedText style={[styles.fallbackText, { color: theme.textSecondary }]}>
+                  {t('result.fallbackMsg', { reason: t(`routingError.${route.fallback.reason}`) })}
+                </ThemedText>
+                <TouchableOpacity
+                  onPress={() => router.push('/settings')}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('result.openSettings')}
+                  hitSlop={8}
+                >
+                  <ThemedText style={[styles.fallbackLink, { color: theme.secondary }]}>
+                    {t('result.openSettings')}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Hero recommendation */}
           {!sunData.hasDirectSunlight ? (
             <View style={[styles.hero, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.md]}>
@@ -262,6 +286,18 @@ export default function RouteResultScreen() {
               </View>
             </View>
 
+            <View style={styles.sourceRow}>
+              <MaterialCommunityIcons
+                name={route.provider === 'google' ? 'google-maps' : 'map-outline'}
+                size={14}
+                color={theme.textMuted}
+              />
+              <ThemedText style={[styles.sourceText, { color: theme.textMuted }]}>
+                {t('result.routeBy', { provider: t(`provider.${route.provider}`) })}
+                {route.trafficAware ? ` · ${t('result.liveTraffic')}` : ''}
+              </ThemedText>
+            </View>
+
             <ThemedText style={[styles.disclaimerText, { color: theme.textMuted }]}>
               {t('result.disclaimer')}
             </ThemedText>
@@ -301,6 +337,41 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.xl,
     paddingBottom: Spacing.xxl + Spacing.lg,
+  },
+  fallbackBanner: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.lg,
+  },
+  fallbackBody: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  fallbackTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  fallbackText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  fallbackLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: Spacing.xs,
+  },
+  sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+  },
+  sourceText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   hero: {
     borderRadius: Radius.xl,

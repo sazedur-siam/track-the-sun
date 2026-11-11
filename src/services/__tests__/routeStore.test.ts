@@ -10,6 +10,8 @@ import { Route } from '../routingService';
 const makeRoute = (distance: number): Route => ({
   distance,
   duration: 60,
+  provider: 'osrm',
+  trafficAware: false,
   waypoints: [{ lat: 0, lng: 0, timestamp: new Date(0) }],
 });
 
