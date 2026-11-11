@@ -9,6 +9,7 @@
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SunAvoidance } from "@/src/types";
 import { fetchRoute, Location, Route, RoutingProvider } from "./routingService";
 
 const SETTINGS_KEY = "@trackthesun_settings";
@@ -17,6 +18,8 @@ export interface AppSettings {
   routingProvider: RoutingProvider;
   /** Key entered by the user in Settings; null means "use the built-in key". */
   googleApiKey: string | null;
+  /** Last chosen sun preference on the Home screen. */
+  sunMode: SunAvoidance;
 }
 
 /**
@@ -34,6 +37,7 @@ export function defaultSettings(): AppSettings {
   return {
     routingProvider: getBuiltInGoogleKey() ? "google" : "osrm",
     googleApiKey: null,
+    sunMode: "avoid",
   };
 }
 
@@ -52,6 +56,7 @@ export async function getSettings(): Promise<AppSettings> {
         typeof saved.googleApiKey === "string" && saved.googleApiKey.trim()
           ? saved.googleApiKey.trim()
           : null,
+      sunMode: saved.sunMode === "seek" ? "seek" : "avoid",
     };
   } catch (error) {
     console.error("Error loading settings:", error);

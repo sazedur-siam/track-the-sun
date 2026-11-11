@@ -180,3 +180,30 @@ describe('sun-height weighting (glare-aware)', () => {
     });
   });
 });
+
+describe('seek-the-sun mode', () => {
+  it('recommends the sunny side when seeking the sun', () => {
+    const route = straightRoute(DHAKA, 0, 0.02, 10, LATE_MORNING); // eastbound, sun on the right
+    expect(calculateSunExposure(route, 'avoid').recommendation).toBe('left');
+    const seek = calculateSunExposure(route, 'seek');
+    expect(seek.recommendation).toBe('right');
+    expect(seek.mode).toBe('seek');
+    expect(seek.sunnySide).toBe('right');
+    expect(seek.summary).toMatch(/gets the sun/);
+  });
+
+  it('defaults to avoid', () => {
+    expect(calculateSunExposure(straightRoute(DHAKA, 0, 0.02, 10, LATE_MORNING)).mode).toBe('avoid');
+  });
+
+  it('stays neutral for balanced, overhead and night trips in both modes', () => {
+    const east = straightRoute(DHAKA, 0, 0.02, 5, LATE_MORNING, 15);
+    const turn = east[east.length - 1];
+    const balanced = [...east, ...straightRoute(turn, 0, -0.02, 5, turn.timestamp, 15).slice(1)];
+    const night = straightRoute(DHAKA, 0, 0.02, 10, MIDNIGHT);
+    for (const mode of ['avoid', 'seek'] as const) {
+      expect(calculateSunExposure(balanced, mode).recommendation).toBe('neutral');
+      expect(calculateSunExposure(night, mode).recommendation).toBe('neutral');
+    }
+  });
+});

@@ -64,6 +64,12 @@ describe('route result params', () => {
     expect(parsed.departureTime.toISOString()).toBe(departure.toISOString());
   });
 
+  it('round-trips the sun mode and defaults to avoid', () => {
+    expect(parseRouteResultParams(buildRouteResultParams('a', from, to, departure, 'seek')).mode).toBe('seek');
+    expect(parseRouteResultParams(buildRouteResultParams('a', from, to, departure)).mode).toBe('avoid');
+    expect(parseRouteResultParams({ mode: 'weird' }).mode).toBe('avoid');
+  });
+
   it('accepts array-valued params (expo-router can pass string[])', () => {
     const parsed = parseRouteResultParams({ fromLat: ['1.5'], fromLng: ['2.5'], fromName: ['X'] });
     expect(parsed.from).toEqual({ lat: 1.5, lng: 2.5, name: 'X' });

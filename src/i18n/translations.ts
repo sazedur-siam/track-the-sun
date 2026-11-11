@@ -16,6 +16,7 @@ export const translations: Record<Language, Record<string, string>> = {
   en: {
     // Common
     'common.tagline': 'Find the shady side of your journey',
+    'common.taglineSeek': 'Find the sunny side of your journey',
     'common.save': 'Save',
     'common.cancel': 'Cancel',
     'common.delete': 'Delete',
@@ -38,6 +39,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.searchFrom': 'Search starting location...',
     'home.searchTo': 'Search destination...',
     'home.departureTime': 'Departure Time',
+    'home.modeLabel': 'I want to',
+    'home.modeAvoid': 'Avoid sun',
+    'home.modeSeek': 'Get sun',
     'home.findSeat': 'Find My Seat',
     'home.tracingSun': 'Tracing sun…',
     'home.helper': 'Enter a start and destination to analyze sun exposure.',
@@ -103,6 +107,9 @@ export const translations: Record<Language, Record<string, string>> = {
       'Sit on the {sit} side — the sun is mostly on your {sun} (facing {facing}) for {percent}% of the trip.',
     'result.summaryRecommendNoFacing':
       'Sit on the {sit} side — the sun is mostly on your {sun} for {percent}% of the trip.',
+    'result.summarySeek':
+      'Sit on the {sit} side — it faces {facing} and gets the sun for {percent}% of the trip.',
+    'result.summarySeekNoFacing': 'Sit on the {sit} side — it gets the sun for {percent}% of the trip.',
     'result.savedTitle': 'Saved',
     'result.savedMsg': 'Route has been added to your favorites.',
     'result.saveErrorMsg': 'Failed to save route.',
@@ -230,6 +237,7 @@ export const translations: Record<Language, Record<string, string>> = {
   bn: {
     // Common
     'common.tagline': 'আপনার যাত্রার ছায়াযুক্ত দিকটি বেছে নিন',
+    'common.taglineSeek': 'আপনার যাত্রার রোদেলা দিকটি বেছে নিন',
     'common.save': 'সংরক্ষণ',
     'common.cancel': 'বাতিল',
     'common.delete': 'মুছুন',
@@ -252,6 +260,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.searchFrom': 'যাত্রা শুরুর স্থান খুঁজুন...',
     'home.searchTo': 'গন্তব্য খুঁজুন...',
     'home.departureTime': 'যাত্রার সময়',
+    'home.modeLabel': 'আমি চাই',
+    'home.modeAvoid': 'রোদ এড়াতে',
+    'home.modeSeek': 'রোদ পেতে',
     'home.findSeat': 'আমার আসন খুঁজুন',
     'home.tracingSun': 'সূর্য নির্ণয় হচ্ছে…',
     'home.helper': 'সূর্যের প্রভাব বিশ্লেষণ করতে যাত্রার শুরু ও গন্তব্য দিন।',
@@ -315,6 +326,8 @@ export const translations: Record<Language, Record<string, string>> = {
       '{sit} দিকে বসুন — যাত্রার {percent}% সময় সূর্য মূলত আপনার {sun} দিকে ({facing} মুখী) থাকে।',
     'result.summaryRecommendNoFacing':
       '{sit} দিকে বসুন — যাত্রার {percent}% সময় সূর্য মূলত আপনার {sun} দিকে থাকে।',
+    'result.summarySeek': '{sit} দিকে বসুন — এই দিকটি {facing} মুখী এবং যাত্রার {percent}% সময় রোদ পায়।',
+    'result.summarySeekNoFacing': '{sit} দিকে বসুন — যাত্রার {percent}% সময় এই দিকে রোদ থাকে।',
     'result.savedTitle': 'সংরক্ষিত হয়েছে',
     'result.savedMsg': 'রুটটি আপনার পছন্দে যোগ হয়েছে।',
     'result.saveErrorMsg': 'রুট সংরক্ষণ ব্যর্থ হয়েছে।',

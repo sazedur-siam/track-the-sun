@@ -74,7 +74,13 @@ export default function SavedLocationsScreen() {
       const routeId = putRoute(route);
       router.push({
         pathname: '/route-result',
-        params: buildRouteResultParams(routeId, favorite.fromLocation, favorite.toLocation, departureTime),
+        params: buildRouteResultParams(
+          routeId,
+          favorite.fromLocation,
+          favorite.toLocation,
+          departureTime,
+          favorite.mode ?? 'avoid'
+        ),
       });
     } catch {
       Alert.alert(t('common.error'), t('saved.errorMsg'));
@@ -160,6 +166,17 @@ export default function SavedLocationsScreen() {
                   <View style={styles.tapHintRow}>
                     <MaterialCommunityIcons name="white-balance-sunny" size={14} color={theme.primary} />
                     <ThemedText style={[styles.tapHint, { color: theme.primary }]}>{t('saved.tapHint')}</ThemedText>
+                    {favorite.mode === 'seek' && (
+                      <>
+                        <MaterialCommunityIcons
+                          name="weather-sunny"
+                          size={14}
+                          color={theme.warning}
+                          style={styles.timeIcon}
+                        />
+                        <ThemedText style={[styles.tapHint, { color: theme.warning }]}>{t('home.modeSeek')}</ThemedText>
+                      </>
+                    )}
                     {favorite.departureTime && (
                       <>
                         <MaterialCommunityIcons

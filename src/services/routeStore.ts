@@ -10,7 +10,7 @@
  * from the small location/time params instead.
  */
 
-import { Location } from "@/src/types";
+import { Location, SunAvoidance } from "@/src/types";
 import { Route } from "./routingService";
 
 /** How many routes to keep around (enough for back/forward navigation). */
@@ -54,6 +54,7 @@ export type RouteResultParams = {
   toLat: string;
   toLng: string;
   departureTime: string;
+  mode: SunAvoidance;
 };
 
 /** Build the small, serializable param set for the result screen. */
@@ -62,6 +63,7 @@ export function buildRouteResultParams(
   from: Location,
   to: Location,
   departureTime: Date,
+  mode: SunAvoidance = "avoid",
 ): RouteResultParams {
   return {
     routeId,
@@ -72,6 +74,7 @@ export function buildRouteResultParams(
     toLat: String(to.lat),
     toLng: String(to.lng),
     departureTime: departureTime.toISOString(),
+    mode,
   };
 }
 
@@ -81,6 +84,7 @@ export function parseRouteResultParams(params: Record<string, unknown>): {
   from: Location | null;
   to: Location | null;
   departureTime: Date;
+  mode: SunAvoidance;
 } {
   const str = (key: string): string | undefined => {
     const value = params[key];
@@ -107,5 +111,6 @@ export function parseRouteResultParams(params: Record<string, unknown>): {
     from: toLocation("from"),
     to: toLocation("to"),
     departureTime,
+    mode: str("mode") === "seek" ? "seek" : "avoid",
   };
 }

@@ -26,6 +26,7 @@ export default function RouteResultScreen() {
     toLat,
     toLng,
     departureTime: departureParam,
+    mode: modeParam,
   } = useLocalSearchParams<RouteResultParams>();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const colorScheme = useColorScheme();
@@ -34,10 +35,19 @@ export default function RouteResultScreen() {
 
   // Locations + time come from small URL params; the heavy route itself is
   // handed over in memory via routeStore (see src/services/routeStore.ts).
-  const { from, to, departureTime } = useMemo(
+  const { from, to, departureTime, mode } = useMemo(
     () =>
-      parseRouteResultParams({ fromName, fromLat, fromLng, toName, toLat, toLng, departureTime: departureParam }),
-    [fromName, fromLat, fromLng, toName, toLat, toLng, departureParam]
+      parseRouteResultParams({
+        fromName,
+        fromLat,
+        fromLng,
+        toName,
+        toLat,
+        toLng,
+        departureTime: departureParam,
+        mode: modeParam,
+      }),
+    [fromName, fromLat, fromLng, toName, toLat, toLng, departureParam, modeParam]
   );
 
   const storedRoute = useMemo(() => getRoute(routeId), [routeId]);
@@ -62,8 +72,8 @@ export default function RouteResultScreen() {
   const route: Route | null = storedRoute ?? fetchedRoute ?? null;
 
   const sunData = useMemo(
-    () => (route?.waypoints ? calculateSunExposure(route.waypoints) : null),
-    [route]
+    () => (route?.waypoints ? calculateSunExposure(route.waypoints, mode) : null),
+    [route, mode]
   );
 
   useEffect(() => {
@@ -87,7 +97,7 @@ export default function RouteResultScreen() {
     const saveTo = to ?? { lat: last.lat, lng: last.lng, name: 'Destination' };
 
     try {
-      await saveFavoriteRoute(saveFrom, saveTo, undefined, departureTime);
+      await saveFavoriteRoute(saveFrom, saveTo, undefined, departureTime, mode);
       Alert.alert(t('result.savedTitle'), t('result.savedMsg'));
     } catch {
       Alert.alert(t('common.error'), t('result.saveErrorMsg'));
@@ -141,19 +151,19 @@ export default function RouteResultScreen() {
   } else if (!recommends) {
     summary = t(sunData.neutralReason === 'overhead' ? 'result.summaryOverhead' : 'result.summaryBalanced');
   } else {
-    const sunSide = sunData.recommendation === 'left' ? 'right' : 'left';
+    const seek = sunData.mode === 'seek';
+    // Avoid: the sun is on the other side. Seek: the sun is on the seat's side.
+    const sunSide = seek ? sunData.recommendation : sunData.recommendation === 'left' ? 'right' : 'left';
     const percent = sunSide === 'left' ? sunData.leftPercentage : sunData.rightPercentage;
     const params2 = {
       sit: t(`side.${sunData.recommendation}`),
       sun: t(`side.${sunSide}`),
       percent,
     };
+    const key = seek ? 'result.summarySeek' : 'result.summaryRecommend';
     summary = sunData.sunnySideCompass
-      ? t('result.summaryRecommend', {
-          ...params2,
-          facing: t(`compassFull.${sunData.sunnySideCompass}`),
-        })
-      : t('result.summaryRecommendNoFacing', params2);
+      ? t(key, { ...params2, facing: t(`compassFull.${sunData.sunnySideCompass}`) })
+      : t(`${key}NoFacing`, params2);
   }
 
   return (

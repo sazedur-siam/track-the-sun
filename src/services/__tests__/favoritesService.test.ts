@@ -70,6 +70,14 @@ describe('favorites storage', () => {
     expect(saved.departureTime).toBe('07:45');
   });
 
+  it('stores seek mode, and omits mode for the default avoid', async () => {
+    await saveFavoriteRoute(FROM, TO, 'Sunny', undefined, 'seek');
+    await saveFavoriteRoute(FROM, TO, 'Shady', undefined, 'avoid');
+    const [sunny, shady] = await getFavoriteRoutes();
+    expect(sunny.mode).toBe('seek');
+    expect(shady).not.toHaveProperty('mode');
+  });
+
   it('omits departureTime when not given', async () => {
     await saveFavoriteRoute(FROM, TO, 'Anytime');
     const [saved] = await getFavoriteRoutes();

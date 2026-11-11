@@ -1,6 +1,8 @@
 # 04 · Seek-the-sun mode
 
-**Status:** Proposed · **Value:** Medium · **Effort:** S
+**Status:** Shipped · **Value:** Medium · **Effort:** S
+
+> **As built:** the toggle sits below the departure time on Home ("I want to: Avoid sun | Get sun"), and the last choice is remembered in settings (`sunMode`). The mode travels as the `mode` route param and is stored on saved routes (`FavoriteRoute.mode`, only when `seek`). The Home tagline changes with the mode.
 
 ## Summary
 

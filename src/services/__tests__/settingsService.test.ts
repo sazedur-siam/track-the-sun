@@ -29,8 +29,8 @@ afterAll(() => setBuiltInKey(originalEnv));
 
 describe('defaults', () => {
   it('defaults to OSRM without a built-in key', async () => {
-    expect(defaultSettings()).toEqual({ routingProvider: 'osrm', googleApiKey: null });
-    expect(await getSettings()).toEqual({ routingProvider: 'osrm', googleApiKey: null });
+    expect(defaultSettings()).toEqual({ routingProvider: 'osrm', googleApiKey: null, sunMode: 'avoid' });
+    expect(await getSettings()).toEqual({ routingProvider: 'osrm', googleApiKey: null, sunMode: 'avoid' });
   });
 
   it('defaults to Google when a built-in key exists', async () => {
@@ -47,7 +47,14 @@ describe('defaults', () => {
 describe('persistence', () => {
   it('saves and reloads provider and key (trimmed)', async () => {
     await updateSettings({ routingProvider: 'google', googleApiKey: `  ${USER}  ` });
-    expect(await getSettings()).toEqual({ routingProvider: 'google', googleApiKey: USER });
+    expect(await getSettings()).toEqual({ routingProvider: 'google', googleApiKey: USER, sunMode: 'avoid' });
+  });
+
+  it('persists the sun mode and rejects unknown values', async () => {
+    await updateSettings({ sunMode: 'seek' });
+    expect((await getSettings()).sunMode).toBe('seek');
+    await AsyncStorage.setItem('@trackthesun_settings', JSON.stringify({ sunMode: 'maybe' }));
+    expect((await getSettings()).sunMode).toBe('avoid');
   });
 
   it('stores an empty key as null', async () => {
@@ -69,20 +76,20 @@ describe('persistence', () => {
 describe('effective key', () => {
   it("prefers the user's key over the built-in key", () => {
     setBuiltInKey(BUILT_IN);
-    const settings = { routingProvider: 'google' as const, googleApiKey: USER };
+    const settings = { routingProvider: 'google' as const, googleApiKey: USER, sunMode: 'avoid' as const };
     expect(effectiveGoogleKey(settings)).toBe(USER);
     expect(googleKeySource(settings)).toBe('user');
   });
 
   it('uses the built-in key when the user has none', () => {
     setBuiltInKey(BUILT_IN);
-    const settings = { routingProvider: 'google' as const, googleApiKey: null };
+    const settings = { routingProvider: 'google' as const, googleApiKey: null, sunMode: 'avoid' as const };
     expect(effectiveGoogleKey(settings)).toBe(BUILT_IN);
     expect(googleKeySource(settings)).toBe('builtIn');
   });
 
   it('reports no key at all', () => {
-    const settings = { routingProvider: 'osrm' as const, googleApiKey: null };
+    const settings = { routingProvider: 'osrm' as const, googleApiKey: null, sunMode: 'avoid' as const };
     expect(effectiveGoogleKey(settings)).toBeNull();
     expect(googleKeySource(settings)).toBe('none');
   });

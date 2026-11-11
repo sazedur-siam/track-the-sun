@@ -1,4 +1,4 @@
-import { Location } from "@/src/types";
+import { Location, SunAvoidance } from "@/src/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const FAVORITES_KEY = "@trackthesun_favorites";
@@ -14,6 +14,8 @@ export interface FavoriteRoute {
    * backwards compatibility with routes saved before this field existed.
    */
   departureTime?: string;
+  /** Sun preference for this route; missing means "avoid". */
+  mode?: SunAvoidance;
 }
 
 /** Format a date as a local "HH:mm" time of day. */
@@ -46,6 +48,7 @@ export async function saveFavoriteRoute(
   toLocation: Location,
   name?: string,
   departureTime?: Date,
+  mode?: SunAvoidance,
 ): Promise<void> {
   try {
     const favorites = await getFavoriteRoutes();
@@ -56,6 +59,7 @@ export async function saveFavoriteRoute(
       name: name || `${fromLocation.name} → ${toLocation.name}`,
       createdAt: new Date().toISOString(),
       ...(departureTime ? { departureTime: toTimeOfDay(departureTime) } : {}),
+      ...(mode === "seek" ? { mode } : {}),
     };
 
     favorites.push(newFavorite);

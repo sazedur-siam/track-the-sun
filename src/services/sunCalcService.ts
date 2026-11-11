@@ -3,7 +3,7 @@
  * Uses the suncalc library to calculate sun position
  */
 
-import { RouteWaypoint } from "@/src/types";
+import { RouteWaypoint, SunAvoidance } from "@/src/types";
 import * as SunCalc from "suncalc";
 import { calculateBearing } from "./routingService";
 
@@ -80,8 +80,13 @@ export interface SunExposureResult {
    * lit ("balanced"), or the sun is mostly overhead ("overhead").
    */
   neutralReason: "balanced" | "overhead" | null;
-  /** Side the rider should SIT on to avoid the sun (opposite the sunny side). */
+  /**
+   * Side the rider should SIT on: opposite the sunny side when avoiding the
+   * sun, the sunny side itself when seeking it.
+   */
   recommendation: Side;
+  /** Whether the rider wants to avoid or get the sun. */
+  mode: SunAvoidance;
   /** Side the sun is predominantly on during the journey. */
   sunnySide: Side;
   /** Compass direction the sunny side faces (circular-mean of sun azimuth). */
@@ -211,6 +216,7 @@ function azimuthToCompass(azimuth: number): Compass {
  */
 export function calculateSunExposure(
   waypoints: RouteWaypoint[],
+  mode: SunAvoidance = "avoid",
 ): SunExposureResult {
   if (waypoints.length < 2) {
     return {
@@ -222,6 +228,7 @@ export function calculateSunExposure(
       glare: null,
       neutralReason: null,
       recommendation: "neutral",
+      mode,
       sunnySide: "neutral",
       sunnySideCompass: null,
       hasDirectSunlight: false,
@@ -361,15 +368,22 @@ export function calculateSunExposure(
     }
   }
 
-  // Recommendation (sit on the opposite side to avoid sun)
-  let recommendation: Side = "neutral";
+  // Recommendation: a side only counts as sunnier with a clear margin.
+  // Avoid → sit opposite the sunnier side. Seek → sit on it.
+  let clearlySunnier: Side = "neutral";
   if (hasSunlight) {
     if (rightIntensity > leftIntensity + RECOMMENDATION_MARGIN) {
-      recommendation = "left"; // Sit on the left to avoid sun on the right
+      clearlySunnier = "right";
     } else if (leftIntensity > rightIntensity + RECOMMENDATION_MARGIN) {
-      recommendation = "right"; // Sit on the right to avoid sun on the left
+      clearlySunnier = "left";
     }
   }
+  const recommendation: Side =
+    clearlySunnier === "neutral" || mode === "seek"
+      ? clearlySunnier
+      : clearlySunnier === "left"
+        ? "right"
+        : "left";
 
   // Why no recommendation: one side IS sunnier by distance, but the sun is
   // mostly high overhead, so little of it comes through the side windows.
@@ -396,13 +410,16 @@ export function calculateSunExposure(
   } else if (recommendation === "neutral") {
     summary = "Sun exposure is balanced - either side is fine";
   } else {
-    const sunSide = recommendation === "left" ? "right" : "left";
+    const sunSide = clearlySunnier;
     const exposurePercent =
       sunSide === "left" ? leftPercentage : rightPercentage;
     const facing = sunnySideCompass
       ? ` (facing ${compassName(sunnySideCompass)})`
       : "";
-    summary = `Sit on the ${recommendation} side — the sun is mostly on your ${sunSide}${facing} for ${exposurePercent}% of the trip`;
+    summary =
+      mode === "seek"
+        ? `Sit on the ${recommendation} side — it gets the sun${facing} for ${exposurePercent}% of the trip`
+        : `Sit on the ${recommendation} side — the sun is mostly on your ${sunSide}${facing} for ${exposurePercent}% of the trip`;
   }
 
   return {
@@ -414,6 +431,7 @@ export function calculateSunExposure(
     glare,
     neutralReason,
     recommendation,
+    mode,
     sunnySide,
     sunnySideCompass,
     hasDirectSunlight: hasSunlight,
