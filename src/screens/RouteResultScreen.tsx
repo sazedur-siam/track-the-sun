@@ -455,7 +455,7 @@ export default function RouteResultScreen() {
             </View>
 
             <ThemedText style={[styles.disclaimerText, { color: theme.textMuted }]}>
-              {t('result.disclaimer')}
+              {t(route.trafficAware ? 'result.disclaimerTraffic' : 'result.disclaimer')}
             </ThemedText>
           </View>
         </Animated.View>

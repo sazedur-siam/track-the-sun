@@ -90,6 +90,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'result.arrival': 'Arrival ≈',
     'result.disclaimer':
       'Travel time is estimated from typical driving speeds and ignores real-time traffic.',
+    'result.disclaimerTraffic':
+      "Travel time includes Google's traffic estimate. Real trips can be faster or slower.",
     'result.newSearch': 'New Search',
     'result.noRouteTitle': 'No Route Found',
     'result.noRouteText': 'Unable to calculate this route. Please try again.',
@@ -349,6 +351,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'result.arrival': 'পৌঁছানো ≈',
     'result.disclaimer':
       'ভ্রমণের সময় সাধারণ গাড়ির গতির ভিত্তিতে অনুমান করা এবং সরাসরি যানজট বিবেচনা করে না।',
+    'result.disclaimerTraffic':
+      'যাত্রার সময়ে Google-এর ট্রাফিক অনুমান ধরা হয়েছে। বাস্তবে যাত্রা দ্রুত বা ধীর হতে পারে।',
     'result.newSearch': 'নতুন অনুসন্ধান',
     'result.noRouteTitle': 'কোনো রুট পাওয়া যায়নি',
     'result.noRouteText': 'এই রুট গণনা করা যায়নি। আবার চেষ্টা করুন।',
