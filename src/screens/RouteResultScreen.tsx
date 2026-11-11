@@ -12,15 +12,39 @@ import { bestWindow, scanDepartures, shiftRoute } from '@/src/services/departure
 import { getRoute, parseRouteResultParams, putRoute, RouteResultParams } from '@/src/services/routeStore';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
 import { planRoute } from '@/src/services/settingsService';
+import { buildShareMessage, buildShareQueryParams, buildShareUrl } from '@/src/services/share';
 import { calculateSunExposure } from '@/src/services/sunCalcService';
 import { buildTimeline } from '@/src/services/timeline';
 import { buildSideSegments } from '@/src/utils/geometry';
 import { formatClock } from '@/src/utils/time';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import * as Linking from 'expo-linking';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Platform,
+  ScrollView,
+  Share,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+/**
+ * Base for shared links: a hosted web build if configured, the current site on
+ * web, otherwise null (native then uses an app deep link).
+ */
+function shareBaseUrl(): string | null {
+  const configured = process.env.EXPO_PUBLIC_WEB_URL?.trim();
+  if (configured) return configured;
+  if (Platform.OS === 'web' && typeof window !== 'undefined') return window.location.origin;
+  return null;
+}
 
 export default function RouteResultScreen() {
   const {
@@ -62,6 +86,14 @@ export default function RouteResultScreen() {
   // so recompute the route from the params.
   const fetchKey = `${fromLat},${fromLng}|${toLat},${toLng}|${departureParam}`;
   const [fetched, setFetched] = useState<{ key: string; route: Route | null } | null>(null);
+  const [shareNote, setShareNote] = useState<string | null>(null);
+
+  // Hide the "link copied" / error note after a few seconds.
+  useEffect(() => {
+    if (!shareNote) return;
+    const timer = setTimeout(() => setShareNote(null), 3000);
+    return () => clearTimeout(timer);
+  }, [shareNote]);
   useEffect(() => {
     if (storedRoute || !from || !to) return;
     let cancelled = false;
@@ -95,6 +127,33 @@ export default function RouteResultScreen() {
     [route, departureTime, mode]
   );
   const best = useMemo(() => bestWindow(slots, mode), [slots, mode]);
+
+  const handleShare = async () => {
+    if (!sunData || !from || !to) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const params = buildShareQueryParams(from, to, departureTime, mode);
+    const base = shareBaseUrl();
+    const url = base ? buildShareUrl(base, params) : Linking.createURL('route-result', { queryParams: params });
+    const message = buildShareMessage(t, from, to, formatClock(departureTime), sunData);
+
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+          await navigator.share({ text: message, url });
+          return;
+        }
+        await Clipboard.setStringAsync(`${message}\n${url}`);
+        setShareNote(t('share.copied'));
+        return;
+      }
+      await Share.share({ message: `${message}\n${url}` });
+    } catch (error) {
+      // Closing the share sheet is not an error.
+      if ((error as Error)?.name === 'AbortError') return;
+      setShareNote(t('share.failed'));
+    }
+  };
 
   const handleSelectDeparture = (departure: Date) => {
     if (!route) return;
@@ -414,14 +473,33 @@ export default function RouteResultScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: theme.primary, shadowColor: theme.shadow }, Shadows.md]}
-            onPress={() => router.back()}
+            style={[styles.secondaryButton, { backgroundColor: theme.inputBackground }]}
+            onPress={handleShare}
             accessibilityRole="button"
-            accessibilityLabel={t('result.newSearchA11y')}
+            accessibilityLabel={t('share.a11y')}
           >
-            <ThemedText style={[styles.backButtonText, { color: theme.onPrimary }]}>{t('result.newSearch')}</ThemedText>
+            <MaterialCommunityIcons name="share-variant" size={20} color={theme.text} />
+            <ThemedText style={[styles.secondaryButtonText, { color: theme.text }]}>{t('share.button')}</ThemedText>
           </TouchableOpacity>
         </View>
+
+        {shareNote && (
+          <ThemedText
+            style={[styles.shareNote, { color: theme.textSecondary }]}
+            accessibilityLiveRegion="polite"
+          >
+            {shareNote}
+          </ThemedText>
+        )}
+
+        <TouchableOpacity
+          style={[styles.newSearchButton, { backgroundColor: theme.primary, shadowColor: theme.shadow }, Shadows.md]}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t('result.newSearchA11y')}
+        >
+          <ThemedText style={[styles.backButtonText, { color: theme.onPrimary }]}>{t('result.newSearch')}</ThemedText>
+        </TouchableOpacity>
       </ScrollView>
     </ThemedView>
   );
@@ -581,6 +659,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   secondaryButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -599,6 +678,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  newSearchButton: {
+    marginTop: Spacing.md,
+    paddingVertical: 18,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareNote: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: Spacing.md,
   },
   backButtonText: {
     fontSize: 16,

@@ -5,7 +5,6 @@ These are planned features, one per file. **When a feature ships, its file is de
 | # | Feature | Value | Effort | Depends on |
 | --- | --- | --- | --- | --- |
 | 06 | [Train, walking and other travel modes](06-travel-modes.md) | Medium–High | M–L | — |
-| 07 | [Share a result](07-share-result.md) | Medium | S–M | — |
 
 Effort: **S** ≈ under 1 day, **M** ≈ 1–3 days, **L** ≈ 3+ days.
 
@@ -16,10 +15,11 @@ Effort: **S** ≈ under 1 day, **M** ≈ 1–3 days, **L** ≈ 3+ days.
 - 03 Sun exposure timeline
 - 02 Best time to leave
 - 01 Route map with sun-side colouring
+- 07 Share a result
 
 ## Suggested order
 
-1. **07 Share**, **06 Travel modes.**
+1. **06 Travel modes** (on hold).
 
 ## Adding a feature file
 

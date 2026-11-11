@@ -194,6 +194,17 @@ export const translations: Record<Language, Record<string, string>> = {
     'timeline.neutral': 'No side sun',
     'timeline.a11y': 'Timeline of which side the sun is on during the trip',
 
+    // Share
+    'share.button': 'Share',
+    'share.a11y': 'Share this result',
+    'share.copied': 'Link copied to the clipboard.',
+    'share.failed': "Couldn't share this result.",
+    'share.message.avoid':
+      '☀️ {from} → {to}, leaving {time}: sit on the {side} side. The sun is on the {sunSide} for {percent}% of the trip.',
+    'share.message.seek':
+      '☀️ {from} → {to}, leaving {time}: sit on the {side} side to get the sun ({percent}% of the trip).',
+    'share.message.neutral': '☀️ {from} → {to}, leaving {time}: either side is fine.',
+
     // Map
     'map.title': 'Route map',
     'map.expand': 'Expand map',
@@ -439,6 +450,16 @@ export const translations: Record<Language, Record<string, string>> = {
     'timeline.right': 'রোদ ডান দিকে',
     'timeline.neutral': 'পাশে রোদ নেই',
     'timeline.a11y': 'যাত্রার সময় রোদ কোন দিকে থাকবে তার সময়রেখা',
+
+    // Share
+    'share.button': 'শেয়ার',
+    'share.a11y': 'এই ফলাফল শেয়ার করুন',
+    'share.copied': 'লিংক ক্লিপবোর্ডে কপি হয়েছে।',
+    'share.failed': 'ফলাফলটি শেয়ার করা যায়নি।',
+    'share.message.avoid':
+      '☀️ {from} → {to}, {time}-এ রওনা: {side} দিকে বসুন। যাত্রার {percent}% সময় রোদ {sunSide} দিকে থাকবে।',
+    'share.message.seek': '☀️ {from} → {to}, {time}-এ রওনা: রোদ পেতে {side} দিকে বসুন (যাত্রার {percent}%)।',
+    'share.message.neutral': '☀️ {from} → {to}, {time}-এ রওনা: যেকোনো দিকে বসতে পারেন।',
 
     // Map
     'map.title': 'রুটের মানচিত্র',
