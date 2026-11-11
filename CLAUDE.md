@@ -99,6 +99,8 @@ Waypoint timestamps are interpolated by **cumulative distance**, not by point in
 ## Known gaps / gotchas
 
 - **Maps:** `src/components/RouteMap.tsx` uses react-native-maps (Apple Maps on iOS; Google Maps on Android, which needs a key with "Maps SDK for Android". `app.config.js` injects `GOOGLE_MAPS_ANDROID_API_KEY`, falling back to `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`. Expo Go has its own key). `RouteMap.web.tsx` uses Leaflet with OpenStreetMap tiles, **lazy-imported** inside an effect because Leaflet touches `window` and would break static web rendering. OSM's public tiles are fine for light use only; switch to a tile provider before heavy web traffic.
+- **Never render `MapView` on Android without a Maps key**: Google Maps then crashes the whole app natively ("API key not found"), and an error boundary can't catch it. `nativeMapAvailable()` (`src/utils/mapSupport.ts`) checks Expo Go or `extra.androidGoogleMapsKey` from `app.config.js`. Without it, `RouteMapCard` shows an "Open in Google Maps" button instead.
+- Optional result cards are wrapped in `SafeBoundary`, so a JS error hides the card instead of crashing the screen.
 - Keep `react-native-maps` at the version `npx expo install` picks (1.20.1 for SDK 54), so it matches Expo Go.
 - **Sharing:** `src/services/share.ts` builds the message and a `/route-result?…` link without `routeId`. The receiver refetches from the params. The link base is `EXPO_PUBLIC_WEB_URL` if set, otherwise the current origin on web, otherwise a `trackthesun://` deep link.
 - Don't start the dev server with `CI=1`: Expo turns off file watching in CI mode, and edits won't show up.

@@ -3,8 +3,10 @@ import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { Side } from '@/src/services/sunCalcService';
+import { googleMapsDirectionsUrl, nativeMapAvailable } from '@/src/utils/mapSupport';
 import { sideColor } from '@/src/utils/sideColors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import React, { useState } from 'react';
 import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +20,28 @@ export default function RouteMapCard(props: Omit<RouteMapProps, 'interactive' | 
   const theme = Colors[useColorScheme() ?? 'light'];
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+
+  // No safe in-app map in this build (Android without a Maps key): offer
+  // Google Maps instead of rendering a MapView that would crash the app.
+  if (!nativeMapAvailable()) {
+    return (
+      <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}>
+        <ThemedText type="subtitle">{t('map.title')}</ThemedText>
+        <ThemedText style={[styles.unavailableText, { color: theme.textSecondary }]}>
+          {t('map.unavailable')}
+        </ThemedText>
+        <TouchableOpacity
+          style={[styles.openButton, { backgroundColor: theme.inputBackground }]}
+          onPress={() => Linking.openURL(googleMapsDirectionsUrl(props.start, props.end))}
+          accessibilityRole="link"
+          accessibilityLabel={t('map.openGoogleMaps')}
+        >
+          <MaterialCommunityIcons name="google-maps" size={18} color={theme.text} />
+          <ThemedText style={[styles.openButtonText, { color: theme.text }]}>{t('map.openGoogleMaps')}</ThemedText>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const legend = (
     <View style={styles.legend}>
@@ -135,6 +159,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.lg,
+  },
+  unavailableText: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: Spacing.sm,
+  },
+  openButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+    marginTop: Spacing.md,
+  },
+  openButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
   modalLegend: {
     paddingBottom: Spacing.lg,
