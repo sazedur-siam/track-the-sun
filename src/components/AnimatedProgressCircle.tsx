@@ -58,7 +58,7 @@ const Snowflake = ({ size, index }: { size: number, index: number }) => {
          -1,
          false
        ));
-    }, []);
+    }, [index, opacity, scale, size, x, y]);
 
     const style = useAnimatedStyle(() => ({
         transform: [{ translateY: y.value }, { translateX: x.value }, { scale: scale.value }],
@@ -95,7 +95,7 @@ const FreezeEffect = ({ size }: { size: number }) => {
         -1,
         false
     );
-  }, []);
+  }, [pulse, rotate]);
 
   const iconStyle = useAnimatedStyle(() => ({
       transform: [
@@ -165,7 +165,7 @@ const Spark = ({ size, index }: { size: number, index: number }) => {
         -1,
         false
       ));
-    }, []);
+    }, [index, opacity, scale, size, x, y]);
 
     const sparkStyle = useAnimatedStyle(() => ({
         transform: [
@@ -217,7 +217,7 @@ const FlameEffect = ({ size }: { size: number }) => {
       -1,
       true
     );
-  }, []);
+  }, [flameOpacity, flameScale]);
 
   const flameStyle = useAnimatedStyle(() => ({
     transform: [

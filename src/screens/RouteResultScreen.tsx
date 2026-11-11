@@ -3,53 +3,164 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import BusDiagram from '@/src/components/BusDiagram';
+import DepartureChart from '@/src/components/DepartureChart';
+import ExposureTimeline from '@/src/components/ExposureTimeline';
+import RouteMapCard from '@/src/components/RouteMapCard';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
+import { bestWindow, scanDepartures, shiftRoute } from '@/src/services/departurePlanner';
+import { getRoute, parseRouteResultParams, putRoute, RouteResultParams } from '@/src/services/routeStore';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
+import { planRoute } from '@/src/services/settingsService';
+import { buildShareMessage, buildShareQueryParams, buildShareUrl } from '@/src/services/share';
 import { calculateSunExposure } from '@/src/services/sunCalcService';
+import { buildTimeline } from '@/src/services/timeline';
+import { buildSideSegments } from '@/src/utils/geometry';
+import { formatClock } from '@/src/utils/time';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import * as Linking from 'expo-linking';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Alert, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Platform,
+  ScrollView,
+  Share,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+/**
+ * Base for shared links: a hosted web build if configured, the current site on
+ * web, otherwise null (native then uses an app deep link).
+ */
+function shareBaseUrl(): string | null {
+  const configured = process.env.EXPO_PUBLIC_WEB_URL?.trim();
+  if (configured) return configured;
+  if (Platform.OS === 'web' && typeof window !== 'undefined') return window.location.origin;
+  return null;
+}
 
 export default function RouteResultScreen() {
-  const params = useLocalSearchParams();
+  const {
+    routeId,
+    fromName,
+    fromLat,
+    fromLng,
+    toName,
+    toLat,
+    toLng,
+    departureTime: departureParam,
+    mode: modeParam,
+  } = useLocalSearchParams<RouteResultParams>();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { t } = useTranslation();
 
-  const fromName = params.fromName as string;
-  const toName = params.toName as string;
-
-  // Parse the route once per param change instead of on every render.
-  const route = useMemo<Route | null>(() => {
-    if (!params.route) return null;
-    try {
-      const parsed = JSON.parse(params.route as string);
-      if (parsed.waypoints) {
-        parsed.waypoints = parsed.waypoints.map((wp: any) => ({
-          ...wp,
-          timestamp: new Date(wp.timestamp),
-        }));
-      }
-      return parsed;
-    } catch (e) {
-      console.error('Failed to parse route:', e);
-      return null;
-    }
-  }, [params.route]);
-
-  const departureTime = useMemo(
-    () => (params.departureTime ? new Date(params.departureTime as string) : new Date()),
-    [params.departureTime]
+  // Locations + time come from small URL params; the heavy route itself is
+  // handed over in memory via routeStore (see src/services/routeStore.ts).
+  const { from, to, departureTime, mode } = useMemo(
+    () =>
+      parseRouteResultParams({
+        fromName,
+        fromLat,
+        fromLng,
+        toName,
+        toLat,
+        toLng,
+        departureTime: departureParam,
+        mode: modeParam,
+      }),
+    [fromName, fromLat, fromLng, toName, toLat, toLng, departureParam, modeParam]
   );
+
+  const storedRoute = useMemo(() => getRoute(routeId), [routeId]);
+
+  // Fallback: the store is empty after a web refresh, deep link or app restart,
+  // so recompute the route from the params.
+  const fetchKey = `${fromLat},${fromLng}|${toLat},${toLng}|${departureParam}`;
+  const [fetched, setFetched] = useState<{ key: string; route: Route | null } | null>(null);
+  const [shareNote, setShareNote] = useState<string | null>(null);
+
+  // Hide the "link copied" / error note after a few seconds.
+  useEffect(() => {
+    if (!shareNote) return;
+    const timer = setTimeout(() => setShareNote(null), 3000);
+    return () => clearTimeout(timer);
+  }, [shareNote]);
+  useEffect(() => {
+    if (storedRoute || !from || !to) return;
+    let cancelled = false;
+    planRoute(from, to, departureTime).then((result) => {
+      if (!cancelled) setFetched({ key: fetchKey, route: result });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storedRoute, from, to, departureTime, fetchKey]);
+
+  const fetchedRoute = fetched?.key === fetchKey ? fetched.route : undefined;
+  const isFetching = !storedRoute && !!from && !!to && fetchedRoute === undefined;
+  const route: Route | null = storedRoute ?? fetchedRoute ?? null;
 
   const sunData = useMemo(
-    () => (route?.waypoints ? calculateSunExposure(route.waypoints) : null),
-    [route]
+    () => (route?.waypoints ? calculateSunExposure(route.waypoints, mode) : null),
+    [route, mode]
   );
+
+  const mapSegments = useMemo(
+    () => (route && sunData ? buildSideSegments(route.waypoints, sunData.waypointDetails) : []),
+    [route, sunData]
+  );
+
+  const timeline = useMemo(() => (sunData ? buildTimeline(sunData.waypointDetails) : []), [sunData]);
+
+  // Best time to leave: same route, departures every 15 min within ±3 h.
+  const slots = useMemo(
+    () => (route ? scanDepartures(route, departureTime, { mode }) : []),
+    [route, departureTime, mode]
+  );
+  const best = useMemo(() => bestWindow(slots, mode), [slots, mode]);
+
+  const handleShare = async () => {
+    if (!sunData || !from || !to) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const params = buildShareQueryParams(from, to, departureTime, mode);
+    const base = shareBaseUrl();
+    const url = base ? buildShareUrl(base, params) : Linking.createURL('route-result', { queryParams: params });
+    const message = buildShareMessage(t, from, to, formatClock(departureTime), sunData);
+
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+          await navigator.share({ text: message, url });
+          return;
+        }
+        await Clipboard.setStringAsync(`${message}\n${url}`);
+        setShareNote(t('share.copied'));
+        return;
+      }
+      await Share.share({ message: `${message}\n${url}` });
+    } catch (error) {
+      // Closing the share sheet is not an error.
+      if ((error as Error)?.name === 'AbortError') return;
+      setShareNote(t('share.failed'));
+    }
+  };
+
+  const handleSelectDeparture = (departure: Date) => {
+    if (!route) return;
+    // Reuse the geometry with shifted timestamps; no new network request.
+    const routeId = putRoute(shiftRoute(route, departure));
+    router.setParams({ routeId, departureTime: departure.toISOString() });
+  };
 
   useEffect(() => {
     if (!sunData) return;
@@ -65,24 +176,30 @@ export default function RouteResultScreen() {
     if (!route?.waypoints?.length) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const from = {
-      lat: route.waypoints[0].lat,
-      lng: route.waypoints[0].lng,
-      name: fromName || 'Start Location',
-    };
-    const to = {
-      lat: route.waypoints[route.waypoints.length - 1].lat,
-      lng: route.waypoints[route.waypoints.length - 1].lng,
-      name: toName || 'Destination',
-    };
+    // Prefer the locations the user picked; fall back to the route's endpoints.
+    const first = route.waypoints[0];
+    const last = route.waypoints[route.waypoints.length - 1];
+    const saveFrom = from ?? { lat: first.lat, lng: first.lng, name: 'Start Location' };
+    const saveTo = to ?? { lat: last.lat, lng: last.lng, name: 'Destination' };
 
     try {
-      await saveFavoriteRoute(from, to);
+      await saveFavoriteRoute(saveFrom, saveTo, undefined, departureTime, mode);
       Alert.alert(t('result.savedTitle'), t('result.savedMsg'));
     } catch {
       Alert.alert(t('common.error'), t('result.saveErrorMsg'));
     }
   };
+
+  if (isFetching) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <ThemedText style={[styles.errorText, { color: theme.textSecondary }]}>{t('home.tracingSun')}</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
 
   if (!route || !sunData) {
     return (
@@ -109,14 +226,6 @@ export default function RouteResultScreen() {
   }
 
   const arrivalTime = new Date(departureTime.getTime() + route.duration * 1000);
-  const formatTime = (date: Date) => {
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    const displayMinutes = minutes < 10 ? `0${minutes}` : minutes;
-    return `${displayHours}:${displayMinutes} ${ampm}`;
-  };
 
   const recommends = sunData.recommendation !== 'neutral';
   const sitIcon = sunData.recommendation === 'left' ? 'arrow-left-bold' : 'arrow-right-bold';
@@ -126,27 +235,50 @@ export default function RouteResultScreen() {
   if (!sunData.hasDirectSunlight) {
     summary = t('result.summaryNoSun');
   } else if (!recommends) {
-    summary = t('result.summaryBalanced');
+    summary = t(sunData.neutralReason === 'overhead' ? 'result.summaryOverhead' : 'result.summaryBalanced');
   } else {
-    const sunSide = sunData.recommendation === 'left' ? 'right' : 'left';
+    const seek = sunData.mode === 'seek';
+    // Avoid: the sun is on the other side. Seek: the sun is on the seat's side.
+    const sunSide = seek ? sunData.recommendation : sunData.recommendation === 'left' ? 'right' : 'left';
     const percent = sunSide === 'left' ? sunData.leftPercentage : sunData.rightPercentage;
     const params2 = {
       sit: t(`side.${sunData.recommendation}`),
       sun: t(`side.${sunSide}`),
       percent,
     };
+    const key = seek ? 'result.summarySeek' : 'result.summaryRecommend';
     summary = sunData.sunnySideCompass
-      ? t('result.summaryRecommend', {
-          ...params2,
-          facing: t(`compassFull.${sunData.sunnySideCompass}`),
-        })
-      : t('result.summaryRecommendNoFacing', params2);
+      ? t(key, { ...params2, facing: t(`compassFull.${sunData.sunnySideCompass}`) })
+      : t(`${key}NoFacing`, params2);
   }
 
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: fadeAnim }}>
+          {/* Google failed → we fell back to OSRM */}
+          {route.fallback && (
+            <View style={[styles.fallbackBanner, { backgroundColor: theme.accentSoft }]} accessibilityRole="alert">
+              <MaterialCommunityIcons name="alert-outline" size={22} color={theme.warning} />
+              <View style={styles.fallbackBody}>
+                <ThemedText style={[styles.fallbackTitle, { color: theme.text }]}>{t('result.fallbackTitle')}</ThemedText>
+                <ThemedText style={[styles.fallbackText, { color: theme.textSecondary }]}>
+                  {t('result.fallbackMsg', { reason: t(`routingError.${route.fallback.reason}`) })}
+                </ThemedText>
+                <TouchableOpacity
+                  onPress={() => router.push({ pathname: '/settings', params: { focus: 'key' } })}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('result.openSettings')}
+                  hitSlop={8}
+                >
+                  <ThemedText style={[styles.fallbackLink, { color: theme.secondary }]}>
+                    {t('result.openSettings')}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Hero recommendation */}
           {!sunData.hasDirectSunlight ? (
             <View style={[styles.hero, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.md]}>
@@ -183,6 +315,18 @@ export default function RouteResultScreen() {
             </View>
           )}
 
+          {/* Route map, coloured by sun side */}
+          {mapSegments.length > 0 && (
+            <RouteMapCard
+              segments={mapSegments}
+              start={{ latitude: route.waypoints[0].lat, longitude: route.waypoints[0].lng }}
+              end={{
+                latitude: route.waypoints[route.waypoints.length - 1].lat,
+                longitude: route.waypoints[route.waypoints.length - 1].lng,
+              }}
+            />
+          )}
+
           {/* Sun on each side */}
           {sunData.hasDirectSunlight && (
             <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}>
@@ -196,6 +340,54 @@ export default function RouteResultScreen() {
                 recommendation={sunData.recommendation}
                 sunnySide={sunData.sunnySide}
                 sunnySideCompass={sunData.sunnySideCompass}
+              />
+
+              {sunData.sunnySideStrength && sunData.sunnySide !== 'neutral' && (
+                <View style={[styles.insightRow, { backgroundColor: theme.inputBackground }]}>
+                  <MaterialCommunityIcons name="white-balance-sunny" size={18} color={theme.primary} />
+                  <ThemedText style={[styles.insightText, { color: theme.text }]}>
+                    {t(`result.strength.${sunData.sunnySideStrength}`, { side: t(`side.${sunData.sunnySide}`) })}
+                  </ThemedText>
+                </View>
+              )}
+
+              {sunData.glare && (
+                <View style={[styles.insightRow, { backgroundColor: theme.accentSoft }]}>
+                  <MaterialCommunityIcons name="weather-sunny-alert" size={18} color={theme.warning} />
+                  <ThemedText style={[styles.insightText, { color: theme.text }]}>
+                    {t('result.glare', {
+                      side: t(`side.${sunData.glare.side}`),
+                      start: formatClock(sunData.glare.start),
+                      end: formatClock(sunData.glare.end),
+                    })}
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Sun along the way (hidden for night or very short trips) */}
+          {sunData.hasDirectSunlight && route.duration >= 300 && timeline.length > 0 && (
+            <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}>
+              <ThemedText type="subtitle" style={styles.cardTitle}>
+                {t('timeline.title')}
+              </ThemedText>
+              <ExposureTimeline runs={timeline} />
+            </View>
+          )}
+
+          {/* Best time to leave */}
+          {slots.some((s) => s.hasSun) && (
+            <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}>
+              <ThemedText type="subtitle" style={styles.cardTitle}>
+                {t('best.title')}
+              </ThemedText>
+              <DepartureChart
+                slots={slots}
+                best={best}
+                current={departureTime}
+                mode={mode}
+                onSelect={handleSelectDeparture}
               />
             </View>
           )}
@@ -237,21 +429,33 @@ export default function RouteResultScreen() {
               <View style={[styles.statDivider, { backgroundColor: theme.separator }]} />
               <View style={styles.statItem}>
                 <ThemedText style={[styles.statValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {formatTime(departureTime)}
+                  {formatClock(departureTime)}
                 </ThemedText>
                 <ThemedText style={[styles.statLabel, { color: theme.textMuted }]}>{t('result.departure')}</ThemedText>
               </View>
               <View style={[styles.statDivider, { backgroundColor: theme.separator }]} />
               <View style={styles.statItem}>
                 <ThemedText style={[styles.statValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {formatTime(arrivalTime)}
+                  {formatClock(arrivalTime)}
                 </ThemedText>
                 <ThemedText style={[styles.statLabel, { color: theme.textMuted }]}>{t('result.arrival')}</ThemedText>
               </View>
             </View>
 
+            <View style={styles.sourceRow}>
+              <MaterialCommunityIcons
+                name={route.provider === 'google' ? 'google-maps' : 'map-outline'}
+                size={14}
+                color={theme.textMuted}
+              />
+              <ThemedText style={[styles.sourceText, { color: theme.textMuted }]}>
+                {t('result.routeBy', { provider: t(`provider.${route.provider}`) })}
+                {route.trafficAware ? ` · ${t('result.liveTraffic')}` : ''}
+              </ThemedText>
+            </View>
+
             <ThemedText style={[styles.disclaimerText, { color: theme.textMuted }]}>
-              {t('result.disclaimer')}
+              {t(route.trafficAware ? 'result.disclaimerTraffic' : 'result.disclaimer')}
             </ThemedText>
           </View>
         </Animated.View>
@@ -269,14 +473,33 @@ export default function RouteResultScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: theme.primary, shadowColor: theme.shadow }, Shadows.md]}
-            onPress={() => router.back()}
+            style={[styles.secondaryButton, { backgroundColor: theme.inputBackground }]}
+            onPress={handleShare}
             accessibilityRole="button"
-            accessibilityLabel={t('result.newSearchA11y')}
+            accessibilityLabel={t('share.a11y')}
           >
-            <ThemedText style={[styles.backButtonText, { color: theme.onPrimary }]}>{t('result.newSearch')}</ThemedText>
+            <MaterialCommunityIcons name="share-variant" size={20} color={theme.text} />
+            <ThemedText style={[styles.secondaryButtonText, { color: theme.text }]}>{t('share.button')}</ThemedText>
           </TouchableOpacity>
         </View>
+
+        {shareNote && (
+          <ThemedText
+            style={[styles.shareNote, { color: theme.textSecondary }]}
+            accessibilityLiveRegion="polite"
+          >
+            {shareNote}
+          </ThemedText>
+        )}
+
+        <TouchableOpacity
+          style={[styles.newSearchButton, { backgroundColor: theme.primary, shadowColor: theme.shadow }, Shadows.md]}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t('result.newSearchA11y')}
+        >
+          <ThemedText style={[styles.backButtonText, { color: theme.onPrimary }]}>{t('result.newSearch')}</ThemedText>
+        </TouchableOpacity>
       </ScrollView>
     </ThemedView>
   );
@@ -289,6 +512,54 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.xl,
     paddingBottom: Spacing.xxl + Spacing.lg,
+  },
+  insightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    marginTop: Spacing.md,
+  },
+  insightText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  fallbackBanner: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.lg,
+  },
+  fallbackBody: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  fallbackTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  fallbackText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  fallbackLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: Spacing.xs,
+  },
+  sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+  },
+  sourceText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   hero: {
     borderRadius: Radius.xl,
@@ -388,6 +659,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   secondaryButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -406,6 +678,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  newSearchButton: {
+    marginTop: Spacing.md,
+    paddingVertical: 18,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareNote: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: Spacing.md,
   },
   backButtonText: {
     fontSize: 16,

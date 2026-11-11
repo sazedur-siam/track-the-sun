@@ -16,10 +16,12 @@ export const translations: Record<Language, Record<string, string>> = {
   en: {
     // Common
     'common.tagline': 'Find the shady side of your journey',
+    'common.taglineSeek': 'Find the sunny side of your journey',
     'common.save': 'Save',
     'common.cancel': 'Cancel',
     'common.delete': 'Delete',
     'common.error': 'Error',
+    'common.departsAt': 'Departs {time}',
 
     // Navigation
     'nav.home': 'Home',
@@ -37,6 +39,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.searchFrom': 'Search starting location...',
     'home.searchTo': 'Search destination...',
     'home.departureTime': 'Departure Time',
+    'home.modeLabel': 'I want to',
+    'home.modeAvoid': 'Avoid sun',
+    'home.modeSeek': 'Get sun',
     'home.findSeat': 'Find My Seat',
     'home.tracingSun': 'Tracing sun…',
     'home.helper': 'Enter a start and destination to analyze sun exposure.',
@@ -85,6 +90,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'result.arrival': 'Arrival ≈',
     'result.disclaimer':
       'Travel time is estimated from typical driving speeds and ignores real-time traffic.',
+    'result.disclaimerTraffic':
+      "Travel time includes Google's traffic estimate. Real trips can be faster or slower.",
     'result.newSearch': 'New Search',
     'result.noRouteTitle': 'No Route Found',
     'result.noRouteText': 'Unable to calculate this route. Please try again.',
@@ -92,10 +99,19 @@ export const translations: Record<Language, Record<string, string>> = {
     'result.summaryNoSun':
       'No direct sunlight during this journey (nighttime or low sun angle).',
     'result.summaryBalanced': 'Sun exposure is balanced — either side is fine.',
+    'result.summaryOverhead':
+      'The sun is mostly high overhead, so little comes through the side windows. Either side is fine.',
+    'result.strength.strong': 'Strong sun on the {side}: low and from the side.',
+    'result.strength.moderate': 'Moderate sun on the {side}.',
+    'result.strength.mild': 'Mild sun on the {side}: it is mostly high overhead.',
+    'result.glare': 'Low-sun glare on the {side}, {start}–{end}.',
     'result.summaryRecommend':
       'Sit on the {sit} side — the sun is mostly on your {sun} (facing {facing}) for {percent}% of the trip.',
     'result.summaryRecommendNoFacing':
       'Sit on the {sit} side — the sun is mostly on your {sun} for {percent}% of the trip.',
+    'result.summarySeek':
+      'Sit on the {sit} side — it faces {facing} and gets the sun for {percent}% of the trip.',
+    'result.summarySeekNoFacing': 'Sit on the {sit} side — it gets the sun for {percent}% of the trip.',
     'result.savedTitle': 'Saved',
     'result.savedMsg': 'Route has been added to your favorites.',
     'result.saveErrorMsg': 'Failed to save route.',
@@ -172,15 +188,114 @@ export const translations: Record<Language, Record<string, string>> = {
     'units.m': 'm',
     'units.hour': 'h',
     'units.min': 'm',
+
+    // Timeline
+    'timeline.title': 'Sun along the way',
+    'timeline.left': 'Sun on the left',
+    'timeline.right': 'Sun on the right',
+    'timeline.neutral': 'No side sun',
+    'timeline.a11y': 'Timeline of which side the sun is on during the trip',
+
+    // Share
+    'share.button': 'Share',
+    'share.a11y': 'Share this result',
+    'share.copied': 'Link copied to the clipboard.',
+    'share.failed': "Couldn't share this result.",
+    'share.message.avoid':
+      '☀️ {from} → {to}, leaving {time}: sit on the {side} side. The sun is on the {sunSide} for {percent}% of the trip.',
+    'share.message.seek':
+      '☀️ {from} → {to}, leaving {time}: sit on the {side} side to get the sun ({percent}% of the trip).',
+    'share.message.neutral': '☀️ {from} → {to}, leaving {time}: either side is fine.',
+
+    // Map
+    'map.title': 'Route map',
+    'map.expand': 'Expand map',
+    'map.close': 'Close map',
+    'map.start': 'Start',
+    'map.end': 'Destination',
+
+    // Best time to leave
+    'best.title': 'Best time to leave',
+    'best.shadiest': 'Least sun: leave between {start} and {end}',
+    'best.sunniest': 'Most sun: leave between {start} and {end}',
+    'best.shadiestAt': 'Least sun: leave at {time}',
+    'best.sunniestAt': 'Most sun: leave at {time}',
+    'best.noSun': 'No direct sun at any of these times.',
+    'best.best': 'Best time',
+    'best.current': 'Your time',
+    'best.hint': 'Tap a bar to see that time.',
+    'best.footnote': 'Bar height is the sun on the sunnier side. Travel time is assumed to stay the same.',
+    'best.slotA11y': 'Leave at {time}: {score}% sun',
+    'best.slotNightA11y': 'Leave at {time}: no direct sun',
+
+    // Settings
+    'nav.settings': 'Settings',
+    'settings.title': 'Settings',
+    'settings.providerSection': 'Route provider',
+    'settings.providerHint': 'Where TrackTheSun gets the driving route from.',
+    'settings.osrmTitle': 'OSRM (free)',
+    'settings.osrmDesc': 'OpenStreetMap routes. No key needed. No live traffic.',
+    'settings.googleTitle': 'Google Maps',
+    'settings.googleDesc': 'Google Routes API with live traffic for more accurate timing. Needs an API key.',
+    'settings.googleNeedsKey': 'Add a Google API key below to use Google Maps.',
+    'settings.keySection': 'Google Maps API key',
+    'settings.keyUsingUser': 'Using your key ({key})',
+    'settings.keyUsingBuiltIn': 'Using the built-in key ({key})',
+    'settings.keyNone': 'No key set',
+    'settings.keyPlaceholder': 'Paste a new API key',
+    'settings.keyInputA11y': 'Google Maps API key',
+    'settings.showKeyA11y': 'Show key',
+    'settings.hideKeyA11y': 'Hide key',
+    'settings.testAndSave': 'Test & save',
+    'settings.testCurrent': 'Test current key',
+    'settings.removeKey': 'Remove my key',
+    'settings.testing': 'Testing…',
+    'settings.keyOk': 'The key works.',
+    'settings.keySaved': 'Key saved. Google Maps is now your route provider.',
+    'settings.keyFailed': "This key didn't work: {reason}.",
+    'settings.keyFallbackNote':
+      'If Google fails (for example, the key expired or ran out of quota), TrackTheSun uses OSRM automatically.',
+    'settings.pasteA11y': 'Paste from clipboard',
+    'settings.keyFormatHint': 'This doesn\'t look like a Google API key. They usually start with "AIza".',
+    'settings.guideTitle': 'How do I get a key?',
+    'settings.guideStep1':
+      'Open Google Cloud Console and enable the Routes API. Billing must be turned on; Google includes a free monthly allowance.',
+    'settings.guideStep2': 'Go to APIs & Services → Credentials → Create credentials → API key.',
+    'settings.guideStep3': 'Copy the key, tap the paste icon below, then Test & save.',
+    'settings.openConsole': 'Open Google Cloud Console',
+    'settings.restrictTip': 'Tip: restrict the key to the Routes API so it can\'t be misused.',
+    'home.sourceGoogle': 'Routes by Google Maps · live traffic',
+    'home.sourceOsrm': 'Routes by OSRM (free).',
+    'home.sourceAddKey': 'Add your Google Maps key for live traffic',
+    'home.sourceA11y': 'Route provider settings',
+
+    // Routing errors (used as {reason})
+    'routingError.missing_key': 'no API key is set',
+    'routingError.invalid_key': 'the key is invalid, expired, or not allowed to use the Routes API',
+    'routingError.quota': 'the quota or rate limit was reached',
+    'routingError.no_route': 'no route was found',
+    'routingError.network': "the server couldn't be reached",
+    'routingError.server': 'the provider returned an error',
+
+    // Route source
+    'provider.osrm': 'OSRM',
+    'provider.google': 'Google Maps',
+    'result.routeBy': 'Route by {provider}',
+    'result.liveTraffic': 'live traffic',
+    'result.fallbackTitle': 'Google Maps not used',
+    'result.fallbackMsg': 'Showing a free OSRM route instead, because {reason}.',
+    'result.openSettings': 'Open settings',
   },
 
   bn: {
     // Common
     'common.tagline': 'আপনার যাত্রার ছায়াযুক্ত দিকটি বেছে নিন',
+    'common.taglineSeek': 'আপনার যাত্রার রোদেলা দিকটি বেছে নিন',
     'common.save': 'সংরক্ষণ',
     'common.cancel': 'বাতিল',
     'common.delete': 'মুছুন',
     'common.error': 'ত্রুটি',
+    'common.departsAt': 'ছাড়ার সময় {time}',
 
     // Navigation
     'nav.home': 'হোম',
@@ -198,6 +313,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.searchFrom': 'যাত্রা শুরুর স্থান খুঁজুন...',
     'home.searchTo': 'গন্তব্য খুঁজুন...',
     'home.departureTime': 'যাত্রার সময়',
+    'home.modeLabel': 'আমি চাই',
+    'home.modeAvoid': 'রোদ এড়াতে',
+    'home.modeSeek': 'রোদ পেতে',
     'home.findSeat': 'আমার আসন খুঁজুন',
     'home.tracingSun': 'সূর্য নির্ণয় হচ্ছে…',
     'home.helper': 'সূর্যের প্রভাব বিশ্লেষণ করতে যাত্রার শুরু ও গন্তব্য দিন।',
@@ -245,16 +363,26 @@ export const translations: Record<Language, Record<string, string>> = {
     'result.arrival': 'পৌঁছানো ≈',
     'result.disclaimer':
       'ভ্রমণের সময় সাধারণ গাড়ির গতির ভিত্তিতে অনুমান করা এবং সরাসরি যানজট বিবেচনা করে না।',
+    'result.disclaimerTraffic':
+      'যাত্রার সময়ে Google-এর ট্রাফিক অনুমান ধরা হয়েছে। বাস্তবে যাত্রা দ্রুত বা ধীর হতে পারে।',
     'result.newSearch': 'নতুন অনুসন্ধান',
     'result.noRouteTitle': 'কোনো রুট পাওয়া যায়নি',
     'result.noRouteText': 'এই রুট গণনা করা যায়নি। আবার চেষ্টা করুন।',
     'result.goBack': 'ফিরে যান',
     'result.summaryNoSun': 'এই যাত্রায় সরাসরি সূর্যালোক নেই (রাত বা সূর্যের নিচু কোণ)।',
     'result.summaryBalanced': 'সূর্যালোক উভয় দিকে সমান — যেকোনো দিকেই ঠিক আছে।',
+    'result.summaryOverhead':
+      'সূর্য বেশিরভাগ সময় মাথার উপরে, তাই পাশের জানালা দিয়ে কম রোদ আসে। যেকোনো দিকে বসতে পারেন।',
+    'result.strength.strong': '{side} দিকে তীব্র রোদ: নিচু ও পাশ থেকে।',
+    'result.strength.moderate': '{side} দিকে মাঝারি রোদ।',
+    'result.strength.mild': '{side} দিকে হালকা রোদ: সূর্য বেশিরভাগ সময় মাথার উপরে।',
+    'result.glare': '{side} দিকে নিচু সূর্যের ঝলক, {start}–{end}।',
     'result.summaryRecommend':
       '{sit} দিকে বসুন — যাত্রার {percent}% সময় সূর্য মূলত আপনার {sun} দিকে ({facing} মুখী) থাকে।',
     'result.summaryRecommendNoFacing':
       '{sit} দিকে বসুন — যাত্রার {percent}% সময় সূর্য মূলত আপনার {sun} দিকে থাকে।',
+    'result.summarySeek': '{sit} দিকে বসুন — এই দিকটি {facing} মুখী এবং যাত্রার {percent}% সময় রোদ পায়।',
+    'result.summarySeekNoFacing': '{sit} দিকে বসুন — যাত্রার {percent}% সময় এই দিকে রোদ থাকে।',
     'result.savedTitle': 'সংরক্ষিত হয়েছে',
     'result.savedMsg': 'রুটটি আপনার পছন্দে যোগ হয়েছে।',
     'result.saveErrorMsg': 'রুট সংরক্ষণ ব্যর্থ হয়েছে।',
@@ -331,5 +459,101 @@ export const translations: Record<Language, Record<string, string>> = {
     'units.m': 'মি',
     'units.hour': 'ঘ',
     'units.min': 'মিন',
+
+    // Timeline
+    'timeline.title': 'পথে রোদ কোন দিকে',
+    'timeline.left': 'রোদ বাঁ দিকে',
+    'timeline.right': 'রোদ ডান দিকে',
+    'timeline.neutral': 'পাশে রোদ নেই',
+    'timeline.a11y': 'যাত্রার সময় রোদ কোন দিকে থাকবে তার সময়রেখা',
+
+    // Share
+    'share.button': 'শেয়ার',
+    'share.a11y': 'এই ফলাফল শেয়ার করুন',
+    'share.copied': 'লিংক ক্লিপবোর্ডে কপি হয়েছে।',
+    'share.failed': 'ফলাফলটি শেয়ার করা যায়নি।',
+    'share.message.avoid':
+      '☀️ {from} → {to}, {time}-এ রওনা: {side} দিকে বসুন। যাত্রার {percent}% সময় রোদ {sunSide} দিকে থাকবে।',
+    'share.message.seek': '☀️ {from} → {to}, {time}-এ রওনা: রোদ পেতে {side} দিকে বসুন (যাত্রার {percent}%)।',
+    'share.message.neutral': '☀️ {from} → {to}, {time}-এ রওনা: যেকোনো দিকে বসতে পারেন।',
+
+    // Map
+    'map.title': 'রুটের মানচিত্র',
+    'map.expand': 'মানচিত্র বড় করুন',
+    'map.close': 'মানচিত্র বন্ধ করুন',
+    'map.start': 'শুরু',
+    'map.end': 'গন্তব্য',
+
+    // Best time to leave
+    'best.title': 'রওনা দেওয়ার সেরা সময়',
+    'best.shadiest': 'সবচেয়ে কম রোদ: {start} থেকে {end}-এর মধ্যে রওনা দিন',
+    'best.sunniest': 'সবচেয়ে বেশি রোদ: {start} থেকে {end}-এর মধ্যে রওনা দিন',
+    'best.shadiestAt': 'সবচেয়ে কম রোদ: {time}-এ রওনা দিন',
+    'best.sunniestAt': 'সবচেয়ে বেশি রোদ: {time}-এ রওনা দিন',
+    'best.noSun': 'এই সময়গুলোর কোনোটিতেই সরাসরি রোদ নেই।',
+    'best.best': 'সেরা সময়',
+    'best.current': 'আপনার সময়',
+    'best.hint': 'কোনো সময় দেখতে একটি বারে চাপুন।',
+    'best.footnote': 'বারের উচ্চতা হলো বেশি রোদের দিকের রোদ। যাত্রার সময়কাল একই ধরা হয়েছে।',
+    'best.slotA11y': '{time}-এ রওনা: {score}% রোদ',
+    'best.slotNightA11y': '{time}-এ রওনা: সরাসরি রোদ নেই',
+
+    // Settings
+    'nav.settings': 'সেটিংস',
+    'settings.title': 'সেটিংস',
+    'settings.providerSection': 'রুট সরবরাহকারী',
+    'settings.providerHint': 'TrackTheSun কোথা থেকে গাড়ির রুট নেবে।',
+    'settings.osrmTitle': 'OSRM (ফ্রি)',
+    'settings.osrmDesc': 'OpenStreetMap রুট। কোনো কী লাগে না। লাইভ ট্রাফিক নেই।',
+    'settings.googleTitle': 'Google Maps',
+    'settings.googleDesc': 'লাইভ ট্রাফিকসহ Google Routes API, তাই সময়ের হিসাব আরও নির্ভুল। একটি API কী লাগে।',
+    'settings.googleNeedsKey': 'Google Maps ব্যবহার করতে নিচে একটি Google API কী যোগ করুন।',
+    'settings.keySection': 'Google Maps API কী',
+    'settings.keyUsingUser': 'আপনার কী ব্যবহার হচ্ছে ({key})',
+    'settings.keyUsingBuiltIn': 'বিল্ট-ইন কী ব্যবহার হচ্ছে ({key})',
+    'settings.keyNone': 'কোনো কী সেট করা নেই',
+    'settings.keyPlaceholder': 'নতুন API কী পেস্ট করুন',
+    'settings.keyInputA11y': 'Google Maps API কী',
+    'settings.showKeyA11y': 'কী দেখান',
+    'settings.hideKeyA11y': 'কী লুকান',
+    'settings.testAndSave': 'পরীক্ষা করে সংরক্ষণ',
+    'settings.testCurrent': 'বর্তমান কী পরীক্ষা করুন',
+    'settings.removeKey': 'আমার কী মুছুন',
+    'settings.testing': 'পরীক্ষা চলছে…',
+    'settings.keyOk': 'কী কাজ করছে।',
+    'settings.keySaved': 'কী সংরক্ষিত হয়েছে। এখন Google Maps আপনার রুট সরবরাহকারী।',
+    'settings.keyFailed': 'এই কী কাজ করেনি: {reason}।',
+    'settings.keyFallbackNote':
+      'Google ব্যর্থ হলে (যেমন কী-এর মেয়াদ শেষ বা কোটা শেষ), TrackTheSun স্বয়ংক্রিয়ভাবে OSRM ব্যবহার করবে।',
+    'settings.pasteA11y': 'ক্লিপবোর্ড থেকে পেস্ট করুন',
+    'settings.keyFormatHint': 'এটি Google API কী বলে মনে হচ্ছে না। সাধারণত কী "AIza" দিয়ে শুরু হয়।',
+    'settings.guideTitle': 'কী কীভাবে পাবেন?',
+    'settings.guideStep1':
+      'Google Cloud Console খুলে Routes API চালু করুন। বিলিং চালু থাকতে হবে; Google প্রতি মাসে কিছু ব্যবহার বিনামূল্যে দেয়।',
+    'settings.guideStep2': 'APIs & Services → Credentials → Create credentials → API key-এ যান।',
+    'settings.guideStep3': 'কী কপি করে নিচের পেস্ট আইকনে চাপুন, তারপর "পরীক্ষা করে সংরক্ষণ" চাপুন।',
+    'settings.openConsole': 'Google Cloud Console খুলুন',
+    'settings.restrictTip': 'পরামর্শ: কী-টি শুধু Routes API-তে সীমাবদ্ধ রাখুন যাতে অপব্যবহার না হয়।',
+    'home.sourceGoogle': 'রুট: Google Maps · লাইভ ট্রাফিক',
+    'home.sourceOsrm': 'রুট: OSRM (ফ্রি)।',
+    'home.sourceAddKey': 'লাইভ ট্রাফিকের জন্য আপনার Google Maps কী যোগ করুন',
+    'home.sourceA11y': 'রুট সরবরাহকারীর সেটিংস',
+
+    // Routing errors (used as {reason})
+    'routingError.missing_key': 'কোনো API কী সেট করা নেই',
+    'routingError.invalid_key': 'কী অবৈধ, মেয়াদোত্তীর্ণ, অথবা Routes API ব্যবহারের অনুমতি নেই',
+    'routingError.quota': 'কোটা বা রেট লিমিট শেষ হয়েছে',
+    'routingError.no_route': 'কোনো রুট পাওয়া যায়নি',
+    'routingError.network': 'সার্ভারে পৌঁছানো যায়নি',
+    'routingError.server': 'সরবরাহকারী একটি ত্রুটি দিয়েছে',
+
+    // Route source
+    'provider.osrm': 'OSRM',
+    'provider.google': 'Google Maps',
+    'result.routeBy': 'রুট: {provider}',
+    'result.liveTraffic': 'লাইভ ট্রাফিক',
+    'result.fallbackTitle': 'Google Maps ব্যবহার করা যায়নি',
+    'result.fallbackMsg': 'এর বদলে ফ্রি OSRM রুট দেখানো হচ্ছে, কারণ {reason}।',
+    'result.openSettings': 'সেটিংস খুলুন',
   },
 };

@@ -7,16 +7,19 @@ import FavoritesModal from '@/src/components/FavoritesModal';
 import LanguagePicker from '@/src/components/LanguagePicker';
 import LocationInput from '@/src/components/LocationInput';
 import NameInputModal from '@/src/components/NameInputModal';
+import RouteSourceHint from '@/src/components/RouteSourceHint';
 import SunAnimation from '@/src/components/SunAnimation';
+import SunModeToggle from '@/src/components/SunModeToggle';
 import TimePicker from '@/src/components/TimePicker';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
-import { saveFavoriteRoute } from '@/src/services/favoritesService';
-import { fetchRoute } from '@/src/services/routingService';
-import { Location } from '@/src/types';
+import { FavoriteRoute, resolveDepartureTime, saveFavoriteRoute } from '@/src/services/favoritesService';
+import { buildRouteResultParams, putRoute } from '@/src/services/routeStore';
+import { getSettings, planRoute, updateSettings } from '@/src/services/settingsService';
+import { Location, SunAvoidance } from '@/src/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -35,9 +38,20 @@ export default function HomeScreen() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showNameInput, setShowNameInput] = useState(false);
+  const [sunMode, setSunMode] = useState<SunAvoidance>('avoid');
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { t } = useTranslation();
+
+  // Restore the last chosen sun preference.
+  useEffect(() => {
+    getSettings().then((settings) => setSunMode(settings.sunMode));
+  }, []);
+
+  const handleSunModeChange = (mode: SunAvoidance) => {
+    setSunMode(mode);
+    updateSettings({ sunMode: mode }).catch(() => {});
+  };
 
   const canCalculate = fromLocation !== null && toLocation !== null && !isCalculating;
   const hasBothLocations = fromLocation !== null && toLocation !== null;
@@ -49,7 +63,7 @@ export default function HomeScreen() {
     setIsCalculating(true);
 
     try {
-      const route = await fetchRoute(fromLocation, toLocation, departureTime);
+      const route = await planRoute(fromLocation, toLocation, departureTime);
 
       if (!route) {
         Alert.alert(t('home.routeNotFoundTitle'), t('home.routeNotFoundMsg'));
@@ -57,14 +71,10 @@ export default function HomeScreen() {
         return;
       }
 
+      const routeId = putRoute(route);
       router.push({
         pathname: '/route-result',
-        params: {
-          route: JSON.stringify(route),
-          fromName: fromLocation.name,
-          toName: toLocation.name,
-          departureTime: departureTime.toISOString(),
-        },
+        params: buildRouteResultParams(routeId, fromLocation, toLocation, departureTime, sunMode),
       });
     } catch {
       Alert.alert(t('common.error'), t('home.errorMsg'));
@@ -83,7 +93,7 @@ export default function HomeScreen() {
     if (!fromLocation || !toLocation) return;
 
     try {
-      await saveFavoriteRoute(fromLocation, toLocation, name);
+      await saveFavoriteRoute(fromLocation, toLocation, name, departureTime, sunMode);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(t('home.savedTitle'), t('home.savedMsg'));
       setShowNameInput(false);
@@ -92,9 +102,13 @@ export default function HomeScreen() {
     }
   };
 
-  const handleLoadFavorite = (from: Location, to: Location) => {
-    setFromLocation(from);
-    setToLocation(to);
+  const handleLoadFavorite = (favorite: FavoriteRoute) => {
+    setFromLocation(favorite.fromLocation);
+    setToLocation(favorite.toLocation);
+    if (favorite.departureTime) {
+      setDepartureTime(resolveDepartureTime(favorite.departureTime));
+    }
+    handleSunModeChange(favorite.mode ?? 'avoid');
   };
 
   return (
@@ -120,7 +134,7 @@ export default function HomeScreen() {
               TrackTheSun
             </ThemedText>
             <ThemedText style={[styles.subtitle, { color: theme.textSecondary }]}>
-              {t('common.tagline')}
+              {t(sunMode === 'seek' ? 'common.taglineSeek' : 'common.tagline')}
             </ThemedText>
           </View>
 
@@ -184,6 +198,8 @@ export default function HomeScreen() {
               selectedTime={departureTime}
               onTimeChange={setDepartureTime}
             />
+
+            <SunModeToggle value={sunMode} onChange={handleSunModeChange} />
           </View>
 
           {/* Action Buttons */}
@@ -237,6 +253,8 @@ export default function HomeScreen() {
               {t('home.helper')}
             </ThemedText>
           )}
+
+          <RouteSourceHint />
         </ScrollView>
       </KeyboardAvoidingView>
 

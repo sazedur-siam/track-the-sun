@@ -2,8 +2,13 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
-import { deleteFavoriteRoute, FavoriteRoute, getFavoriteRoutes } from '@/src/services/favoritesService';
-import { Location } from '@/src/types';
+import {
+  deleteFavoriteRoute,
+  FavoriteRoute,
+  getFavoriteRoutes,
+  resolveDepartureTime,
+} from '@/src/services/favoritesService';
+import { formatClock } from '@/src/utils/time';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
@@ -12,7 +17,7 @@ import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 're
 interface FavoritesModalProps {
   visible: boolean;
   onClose: () => void;
-  onSelectFavorite: (from: Location, to: Location) => void;
+  onSelectFavorite: (favorite: FavoriteRoute) => void;
 }
 
 export default function FavoritesModal({ visible, onClose, onSelectFavorite }: FavoritesModalProps) {
@@ -43,7 +48,7 @@ export default function FavoritesModal({ visible, onClose, onSelectFavorite }: F
 
   const handleSelect = (favorite: FavoriteRoute) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onSelectFavorite(favorite.fromLocation, favorite.toLocation);
+    onSelectFavorite(favorite);
     onClose();
   };
 
@@ -90,6 +95,14 @@ export default function FavoritesModal({ visible, onClose, onSelectFavorite }: F
                     <ThemedText style={[styles.favoriteDetails, { color: theme.textSecondary }]} numberOfLines={1}>
                       → {favorite.toLocation.name}
                     </ThemedText>
+                    {favorite.departureTime && (
+                      <View style={styles.timeRow}>
+                        <MaterialCommunityIcons name="clock-outline" size={14} color={theme.primary} />
+                        <ThemedText style={[styles.timeText, { color: theme.primary }]}>
+                          {t('common.departsAt', { time: formatClock(resolveDepartureTime(favorite.departureTime)) })}
+                        </ThemedText>
+                      </View>
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.deleteButton}
@@ -171,6 +184,16 @@ const styles = StyleSheet.create({
   },
   favoriteDetails: {
     fontSize: 14,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  timeText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   deleteButton: {
     justifyContent: 'center',

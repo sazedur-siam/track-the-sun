@@ -36,7 +36,7 @@ export default function SunAnimation() {
       -1, // Infinite
       true // Reverse
     );
-  }, []);
+  }, [rotation, scale]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
