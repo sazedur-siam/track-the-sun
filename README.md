@@ -8,9 +8,14 @@ TrackTheSun is an Expo / React Native app. You pick where you're going and when 
 
 - 🔎 **Location search** with autocomplete (OpenStreetMap / Nominatim) and **use my current location**
 - 🕒 **Departure time** picker ("Now" or any date and time)
-- 🗺️ **Two route providers**: free **OSRM**, or **Google Maps** (Routes API, live traffic) with your API key. If Google fails, the app switches to OSRM automatically.
-- 🧭 **Sun-side analysis**: works out the sun's position for every part of the route, weighted by distance
-- 🚌 **Clear recommendation**: which side to sit on, what share of the trip each side is in the sun, and the compass direction the sunny side faces
+- 🛣️ **Two route providers**: free **OSRM**, or **Google Maps** (Routes API, live traffic) with your API key. Settings has a step-by-step guide and a Paste button. If Google fails, the app switches to OSRM automatically.
+- 🧭 **Sun-side analysis**: works out the sun's position for every part of the route. Low sun from the side counts more than high midday sun, which mostly hits the roof.
+- 🚌 **Clear recommendation**: which side to sit on, what share of the trip each side is in the sun, the compass direction the sunny side faces, how strong the sun is, and any low-sun glare
+- ☀️ **Avoid sun or get sun**: one toggle flips the advice
+- 🗺️ **Route map** coloured by which side the sun is on (tap to expand)
+- ⏱️ **Sun along the way**: a timeline of when the sun switches sides
+- 🕒 **Best time to leave**: compares departures ±3 hours and highlights the best window. Tap a bar to switch.
+- 📤 **Share** the result as text plus a link that opens the same result
 - ⭐ **Saved routes** that remember your usual departure time
 - 🌗 **Light and dark mode**
 - 🇬🇧 🇧🇩 **English and Bangla**
@@ -24,7 +29,8 @@ TrackTheSun is an Expo / React Native app. You pick where you're going and when 
    - sun to the right → sun on the right side
    - sun to the left → sun on the left side
    - sun mostly ahead, behind, or below the horizon → neither side
-4. **Recommendation.** Each part counts in proportion to its length. If one side is in the sun clearly more often, by a margin of more than 10 percentage points, the app tells you to sit on the other side.
+4. **Weighting.** Each part counts by its length and by how much sun reaches a side window: `|sin(angle to the road)| × cos(sun height)`.
+5. **Recommendation.** If one side clearly gets more sun, by more than 10 points, the app recommends the other side, or that side in "get sun" mode.
 
 ## Tech stack
 
@@ -35,6 +41,7 @@ TrackTheSun is an Expo / React Native app. You pick where you're going and when 
 | Routing API | OSRM public server, or Google Maps Routes API (optional, with automatic fallback) |
 | Geocoding | Nominatim / OpenStreetMap |
 | Sun maths | `suncalc` |
+| Maps | `react-native-maps` (iOS/Android), Leaflet + OpenStreetMap tiles (web) |
 | Storage | `@react-native-async-storage/async-storage` |
 | Animation | `react-native-reanimated` |
 | Tests | Jest (`jest-expo`) |
