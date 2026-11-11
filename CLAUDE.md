@@ -31,7 +31,7 @@ Run `npm test && npm run lint && npm run typecheck` before you call a change don
 ## Google API key
 
 - The built-in key comes from `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` in `.env.local`. That file is gitignored; `.env.example` is the template. Restart `expo start` after changing it.
-- Users can paste their own key in Settings ("Test & save"). It is stored in AsyncStorage and **overrides** the built-in key. "Remove my key" goes back to the built-in one.
+- Users can paste their own key in Settings ("Test & save"), helped by a "How do I get a key?" guide, a Paste button and a key-format hint. `/settings?focus=key` opens the guide and focuses the key field; the Home hint (`RouteSourceHint`) and the fallback notice link there. It is stored in AsyncStorage and **overrides** the built-in key. "Remove my key" goes back to the built-in one.
 - **Never commit a real key**, including in tests. Tests use obvious fakes like `FAKE-user-key-0002`.
 - `EXPO_PUBLIC_*` values are bundled into the app, so the key can be extracted. Restrict it in Google Cloud Console (Routes API only, plus quotas). For EAS builds, set it with `eas env:create`, because `.env.local` isn't uploaded.
 - Read it only as `process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` (dot access, literal name). Expo inlines it at build time, and the lint rule `expo/no-dynamic-env-var` enforces this.

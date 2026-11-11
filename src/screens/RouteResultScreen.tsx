@@ -266,7 +266,7 @@ export default function RouteResultScreen() {
                   {t('result.fallbackMsg', { reason: t(`routingError.${route.fallback.reason}`) })}
                 </ThemedText>
                 <TouchableOpacity
-                  onPress={() => router.push('/settings')}
+                  onPress={() => router.push({ pathname: '/settings', params: { focus: 'key' } })}
                   accessibilityRole="button"
                   accessibilityLabel={t('result.openSettings')}
                   hitSlop={8}

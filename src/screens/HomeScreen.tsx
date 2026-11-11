@@ -7,6 +7,7 @@ import FavoritesModal from '@/src/components/FavoritesModal';
 import LanguagePicker from '@/src/components/LanguagePicker';
 import LocationInput from '@/src/components/LocationInput';
 import NameInputModal from '@/src/components/NameInputModal';
+import RouteSourceHint from '@/src/components/RouteSourceHint';
 import SunAnimation from '@/src/components/SunAnimation';
 import SunModeToggle from '@/src/components/SunModeToggle';
 import TimePicker from '@/src/components/TimePicker';
@@ -252,6 +253,8 @@ export default function HomeScreen() {
               {t('home.helper')}
             </ThemedText>
           )}
+
+          <RouteSourceHint />
         </ScrollView>
       </KeyboardAvoidingView>
 

@@ -15,9 +15,11 @@ import {
   updateSettings,
 } from '@/src/services/settingsService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import * as Linking from 'expo-linking';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -31,6 +33,12 @@ import {
 
 type Status = { kind: 'ok' | 'error'; text: string } | null;
 
+/** Routes API page in Google Cloud Console (enable the API there, then create a key). */
+const CONSOLE_URL = 'https://console.cloud.google.com/apis/library/routes.googleapis.com';
+
+/** Google API keys are 39 characters starting with "AIza". */
+const looksLikeGoogleKey = (value: string) => /^AIza[0-9A-Za-z_-]{35}$/.test(value.trim());
+
 export default function SettingsScreen() {
   const theme = Colors[useColorScheme() ?? 'light'];
   const { t } = useTranslation();
@@ -39,12 +47,31 @@ export default function SettingsScreen() {
   const [showKey, setShowKey] = useState(false);
   const [busy, setBusy] = useState<'save' | 'test' | null>(null);
   const [status, setStatus] = useState<Status>(null);
+  const [guideOpen, setGuideOpen] = useState<boolean | null>(null);
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
+  const keyCardY = useRef(0);
 
   useFocusEffect(
     useCallback(() => {
       getSettings().then(setSettings);
     }, [])
   );
+
+  /** Scroll to the key field and focus it (used by deep links and "Google" without a key). */
+  const focusKeyInput = useCallback(() => {
+    scrollRef.current?.scrollTo({ y: Math.max(keyCardY.current - 16, 0), animated: true });
+    setTimeout(() => inputRef.current?.focus(), 250);
+  }, []);
+
+  // /settings?focus=key → open the guide and jump to the key field.
+  useEffect(() => {
+    if (focus === 'key' && settings) {
+      setGuideOpen(true);
+      focusKeyInput();
+    }
+  }, [focus, settings, focusKeyInput]);
 
   if (!settings) {
     return (
@@ -61,6 +88,8 @@ export default function SettingsScreen() {
     if (provider === settings.routingProvider) return;
     if (provider === 'google' && !currentKey) {
       setStatus({ kind: 'error', text: t('settings.googleNeedsKey') });
+      setGuideOpen(true);
+      focusKeyInput();
       return;
     }
     if (Platform.OS !== 'web') Haptics.selectionAsync();
@@ -100,6 +129,18 @@ export default function SettingsScreen() {
         : { kind: 'error', text: t('settings.keyFailed', { reason: reasonText(result.code) }) }
     );
     setBusy(null);
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = (await Clipboard.getStringAsync()).trim();
+      if (text) {
+        setKeyInput(text);
+        setStatus(null);
+      }
+    } catch {
+      // Clipboard access denied (e.g. browser permission); the user can type instead.
+    }
   };
 
   const handleRemoveKey = async () => {
@@ -147,11 +188,15 @@ export default function SettingsScreen() {
         : t('settings.keyNone');
 
   const canSave = keyInput.trim().length > 0 && busy === null;
+  const showFormatHint = keyInput.trim().length > 0 && !looksLikeGoogleKey(keyInput);
+  // The guide starts open when there is no key at all.
+  const isGuideOpen = guideOpen ?? keySource === 'none';
 
   return (
     <ThemedView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -172,7 +217,12 @@ export default function SettingsScreen() {
           </View>
 
           {/* Google key */}
-          <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}>
+          <View
+            style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}
+            onLayout={(e) => {
+              keyCardY.current = e.nativeEvent.layout.y;
+            }}
+          >
             <ThemedText type="subtitle">{t('settings.keySection')}</ThemedText>
 
             <View style={styles.keyStatusRow}>
@@ -184,8 +234,52 @@ export default function SettingsScreen() {
               <ThemedText style={[styles.keyStatus, { color: theme.text }]}>{keyStatusText}</ThemedText>
             </View>
 
+            {/* How to get a key */}
+            <View style={[styles.guide, { borderColor: theme.border }]}>
+              <TouchableOpacity
+                style={styles.guideHeader}
+                onPress={() => setGuideOpen(!isGuideOpen)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: isGuideOpen }}
+                accessibilityLabel={t('settings.guideTitle')}
+              >
+                <MaterialCommunityIcons name="help-circle-outline" size={18} color={theme.secondary} />
+                <ThemedText style={[styles.guideTitle, { color: theme.secondary }]}>{t('settings.guideTitle')}</ThemedText>
+                <MaterialCommunityIcons
+                  name={isGuideOpen ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={theme.secondary}
+                />
+              </TouchableOpacity>
+              {isGuideOpen && (
+                <View style={styles.guideBody}>
+                  {(['settings.guideStep1', 'settings.guideStep2', 'settings.guideStep3'] as const).map((key, i) => (
+                    <View key={key} style={styles.guideStep}>
+                      <View style={[styles.stepNumber, { backgroundColor: theme.accentSoft }]}>
+                        <ThemedText style={[styles.stepNumberText, { color: theme.warning }]}>{i + 1}</ThemedText>
+                      </View>
+                      <ThemedText style={[styles.guideText, { color: theme.text }]}>{t(key)}</ThemedText>
+                    </View>
+                  ))}
+                  <TouchableOpacity
+                    style={[styles.consoleButton, { backgroundColor: theme.inputBackground }]}
+                    onPress={() => Linking.openURL(CONSOLE_URL)}
+                    accessibilityRole="link"
+                    accessibilityLabel={t('settings.openConsole')}
+                  >
+                    <MaterialCommunityIcons name="open-in-new" size={18} color={theme.text} />
+                    <ThemedText style={[styles.consoleButtonText, { color: theme.text }]}>
+                      {t('settings.openConsole')}
+                    </ThemedText>
+                  </TouchableOpacity>
+                  <ThemedText style={[styles.hint, { color: theme.textMuted }]}>{t('settings.restrictTip')}</ThemedText>
+                </View>
+              )}
+            </View>
+
             <View style={[styles.inputRow, { backgroundColor: theme.inputBackground }]}>
               <TextInput
+                ref={inputRef}
                 style={[styles.input, { color: theme.text }]}
                 value={keyInput}
                 onChangeText={(text) => {
@@ -203,6 +297,14 @@ export default function SettingsScreen() {
                 accessibilityLabel={t('settings.keyInputA11y')}
               />
               <TouchableOpacity
+                onPress={handlePaste}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('settings.pasteA11y')}
+              >
+                <MaterialCommunityIcons name="content-paste" size={20} color={theme.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() => setShowKey((v) => !v)}
                 hitSlop={8}
                 accessibilityRole="button"
@@ -215,6 +317,10 @@ export default function SettingsScreen() {
                 />
               </TouchableOpacity>
             </View>
+
+            {showFormatHint && (
+              <ThemedText style={[styles.hint, { color: theme.warning }]}>{t('settings.keyFormatHint')}</ThemedText>
+            )}
 
             <View style={styles.buttonRow}>
               <TouchableOpacity
@@ -283,7 +389,6 @@ export default function SettingsScreen() {
               <MaterialCommunityIcons name="information-outline" size={18} color={theme.warning} />
               <ThemedText style={[styles.noteText, { color: theme.text }]}>{t('settings.keyFallbackNote')}</ThemedText>
             </View>
-            <ThemedText style={[styles.hint, { color: theme.textMuted }]}>{t('settings.keyHelp')}</ThemedText>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -406,6 +511,60 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     padding: Spacing.md,
     borderRadius: Radius.md,
+  },
+  guide: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+  },
+  guideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+  },
+  guideTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  guideBody: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
+    gap: Spacing.md,
+  },
+  guideStep: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    alignItems: 'flex-start',
+  },
+  stepNumber: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumberText: {
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 16,
+  },
+  guideText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  consoleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  consoleButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   noteText: {
     flex: 1,

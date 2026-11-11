@@ -255,7 +255,19 @@ export const translations: Record<Language, Record<string, string>> = {
     'settings.keyFailed': "This key didn't work: {reason}.",
     'settings.keyFallbackNote':
       'If Google fails (for example, the key expired or ran out of quota), TrackTheSun uses OSRM automatically.',
-    'settings.keyHelp': 'Create a key in Google Cloud Console with the "Routes API" enabled.',
+    'settings.pasteA11y': 'Paste from clipboard',
+    'settings.keyFormatHint': 'This doesn\'t look like a Google API key. They usually start with "AIza".',
+    'settings.guideTitle': 'How do I get a key?',
+    'settings.guideStep1':
+      'Open Google Cloud Console and enable the Routes API. Billing must be turned on; Google includes a free monthly allowance.',
+    'settings.guideStep2': 'Go to APIs & Services → Credentials → Create credentials → API key.',
+    'settings.guideStep3': 'Copy the key, tap the paste icon below, then Test & save.',
+    'settings.openConsole': 'Open Google Cloud Console',
+    'settings.restrictTip': 'Tip: restrict the key to the Routes API so it can\'t be misused.',
+    'home.sourceGoogle': 'Routes by Google Maps · live traffic',
+    'home.sourceOsrm': 'Routes by OSRM (free).',
+    'home.sourceAddKey': 'Add your Google Maps key for live traffic',
+    'home.sourceA11y': 'Route provider settings',
 
     // Routing errors (used as {reason})
     'routingError.missing_key': 'no API key is set',
@@ -513,7 +525,19 @@ export const translations: Record<Language, Record<string, string>> = {
     'settings.keyFailed': 'এই কী কাজ করেনি: {reason}।',
     'settings.keyFallbackNote':
       'Google ব্যর্থ হলে (যেমন কী-এর মেয়াদ শেষ বা কোটা শেষ), TrackTheSun স্বয়ংক্রিয়ভাবে OSRM ব্যবহার করবে।',
-    'settings.keyHelp': 'Google Cloud Console-এ "Routes API" চালু করে একটি কী তৈরি করুন।',
+    'settings.pasteA11y': 'ক্লিপবোর্ড থেকে পেস্ট করুন',
+    'settings.keyFormatHint': 'এটি Google API কী বলে মনে হচ্ছে না। সাধারণত কী "AIza" দিয়ে শুরু হয়।',
+    'settings.guideTitle': 'কী কীভাবে পাবেন?',
+    'settings.guideStep1':
+      'Google Cloud Console খুলে Routes API চালু করুন। বিলিং চালু থাকতে হবে; Google প্রতি মাসে কিছু ব্যবহার বিনামূল্যে দেয়।',
+    'settings.guideStep2': 'APIs & Services → Credentials → Create credentials → API key-এ যান।',
+    'settings.guideStep3': 'কী কপি করে নিচের পেস্ট আইকনে চাপুন, তারপর "পরীক্ষা করে সংরক্ষণ" চাপুন।',
+    'settings.openConsole': 'Google Cloud Console খুলুন',
+    'settings.restrictTip': 'পরামর্শ: কী-টি শুধু Routes API-তে সীমাবদ্ধ রাখুন যাতে অপব্যবহার না হয়।',
+    'home.sourceGoogle': 'রুট: Google Maps · লাইভ ট্রাফিক',
+    'home.sourceOsrm': 'রুট: OSRM (ফ্রি)।',
+    'home.sourceAddKey': 'লাইভ ট্রাফিকের জন্য আপনার Google Maps কী যোগ করুন',
+    'home.sourceA11y': 'রুট সরবরাহকারীর সেটিংস',
 
     // Routing errors (used as {reason})
     'routingError.missing_key': 'কোনো API কী সেট করা নেই',
