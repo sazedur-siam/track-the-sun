@@ -28,7 +28,7 @@ export interface Route {
  * @param encoded - Encoded polyline string
  * @returns Array of [lat, lng] coordinates
  */
-function decodePolyline(encoded: string): [number, number][] {
+export function decodePolyline(encoded: string): [number, number][] {
   const coordinates: [number, number][] = [];
   let index = 0;
   let lat = 0;

@@ -10,7 +10,8 @@ import NameInputModal from '@/src/components/NameInputModal';
 import SunAnimation from '@/src/components/SunAnimation';
 import TimePicker from '@/src/components/TimePicker';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
-import { saveFavoriteRoute } from '@/src/services/favoritesService';
+import { FavoriteRoute, resolveDepartureTime, saveFavoriteRoute } from '@/src/services/favoritesService';
+import { buildRouteResultParams, putRoute } from '@/src/services/routeStore';
 import { fetchRoute } from '@/src/services/routingService';
 import { Location } from '@/src/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -57,14 +58,10 @@ export default function HomeScreen() {
         return;
       }
 
+      const routeId = putRoute(route);
       router.push({
         pathname: '/route-result',
-        params: {
-          route: JSON.stringify(route),
-          fromName: fromLocation.name,
-          toName: toLocation.name,
-          departureTime: departureTime.toISOString(),
-        },
+        params: buildRouteResultParams(routeId, fromLocation, toLocation, departureTime),
       });
     } catch {
       Alert.alert(t('common.error'), t('home.errorMsg'));
@@ -83,7 +80,7 @@ export default function HomeScreen() {
     if (!fromLocation || !toLocation) return;
 
     try {
-      await saveFavoriteRoute(fromLocation, toLocation, name);
+      await saveFavoriteRoute(fromLocation, toLocation, name, departureTime);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(t('home.savedTitle'), t('home.savedMsg'));
       setShowNameInput(false);
@@ -92,9 +89,12 @@ export default function HomeScreen() {
     }
   };
 
-  const handleLoadFavorite = (from: Location, to: Location) => {
-    setFromLocation(from);
-    setToLocation(to);
+  const handleLoadFavorite = (favorite: FavoriteRoute) => {
+    setFromLocation(favorite.fromLocation);
+    setToLocation(favorite.toLocation);
+    if (favorite.departureTime) {
+      setDepartureTime(resolveDepartureTime(favorite.departureTime));
+    }
   };
 
   return (

@@ -5,46 +5,60 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import BusDiagram from '@/src/components/BusDiagram';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
-import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
+import { getRoute, parseRouteResultParams, RouteResultParams } from '@/src/services/routeStore';
+import { fetchRoute, formatDistance, formatDuration, Route } from '@/src/services/routingService';
 import { calculateSunExposure } from '@/src/services/sunCalcService';
+import { formatClock } from '@/src/utils/time';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Alert, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function RouteResultScreen() {
-  const params = useLocalSearchParams();
+  const {
+    routeId,
+    fromName,
+    fromLat,
+    fromLng,
+    toName,
+    toLat,
+    toLng,
+    departureTime: departureParam,
+  } = useLocalSearchParams<RouteResultParams>();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { t } = useTranslation();
 
-  const fromName = params.fromName as string;
-  const toName = params.toName as string;
-
-  // Parse the route once per param change instead of on every render.
-  const route = useMemo<Route | null>(() => {
-    if (!params.route) return null;
-    try {
-      const parsed = JSON.parse(params.route as string);
-      if (parsed.waypoints) {
-        parsed.waypoints = parsed.waypoints.map((wp: any) => ({
-          ...wp,
-          timestamp: new Date(wp.timestamp),
-        }));
-      }
-      return parsed;
-    } catch (e) {
-      console.error('Failed to parse route:', e);
-      return null;
-    }
-  }, [params.route]);
-
-  const departureTime = useMemo(
-    () => (params.departureTime ? new Date(params.departureTime as string) : new Date()),
-    [params.departureTime]
+  // Locations + time come from small URL params; the heavy route itself is
+  // handed over in memory via routeStore (see src/services/routeStore.ts).
+  const { from, to, departureTime } = useMemo(
+    () =>
+      parseRouteResultParams({ fromName, fromLat, fromLng, toName, toLat, toLng, departureTime: departureParam }),
+    [fromName, fromLat, fromLng, toName, toLat, toLng, departureParam]
   );
+
+  const storedRoute = useMemo(() => getRoute(routeId), [routeId]);
+
+  // Fallback: the store is empty after a web refresh, deep link or app restart,
+  // so recompute the route from the params.
+  const fetchKey = `${fromLat},${fromLng}|${toLat},${toLng}|${departureParam}`;
+  const [fetched, setFetched] = useState<{ key: string; route: Route | null } | null>(null);
+  useEffect(() => {
+    if (storedRoute || !from || !to) return;
+    let cancelled = false;
+    fetchRoute(from, to, departureTime).then((result) => {
+      if (!cancelled) setFetched({ key: fetchKey, route: result });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storedRoute, from, to, departureTime, fetchKey]);
+
+  const fetchedRoute = fetched?.key === fetchKey ? fetched.route : undefined;
+  const isFetching = !storedRoute && !!from && !!to && fetchedRoute === undefined;
+  const route: Route | null = storedRoute ?? fetchedRoute ?? null;
 
   const sunData = useMemo(
     () => (route?.waypoints ? calculateSunExposure(route.waypoints) : null),
@@ -65,24 +79,30 @@ export default function RouteResultScreen() {
     if (!route?.waypoints?.length) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const from = {
-      lat: route.waypoints[0].lat,
-      lng: route.waypoints[0].lng,
-      name: fromName || 'Start Location',
-    };
-    const to = {
-      lat: route.waypoints[route.waypoints.length - 1].lat,
-      lng: route.waypoints[route.waypoints.length - 1].lng,
-      name: toName || 'Destination',
-    };
+    // Prefer the locations the user picked; fall back to the route's endpoints.
+    const first = route.waypoints[0];
+    const last = route.waypoints[route.waypoints.length - 1];
+    const saveFrom = from ?? { lat: first.lat, lng: first.lng, name: 'Start Location' };
+    const saveTo = to ?? { lat: last.lat, lng: last.lng, name: 'Destination' };
 
     try {
-      await saveFavoriteRoute(from, to);
+      await saveFavoriteRoute(saveFrom, saveTo, undefined, departureTime);
       Alert.alert(t('result.savedTitle'), t('result.savedMsg'));
     } catch {
       Alert.alert(t('common.error'), t('result.saveErrorMsg'));
     }
   };
+
+  if (isFetching) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <ThemedText style={[styles.errorText, { color: theme.textSecondary }]}>{t('home.tracingSun')}</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
 
   if (!route || !sunData) {
     return (
@@ -109,14 +129,6 @@ export default function RouteResultScreen() {
   }
 
   const arrivalTime = new Date(departureTime.getTime() + route.duration * 1000);
-  const formatTime = (date: Date) => {
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    const displayMinutes = minutes < 10 ? `0${minutes}` : minutes;
-    return `${displayHours}:${displayMinutes} ${ampm}`;
-  };
 
   const recommends = sunData.recommendation !== 'neutral';
   const sitIcon = sunData.recommendation === 'left' ? 'arrow-left-bold' : 'arrow-right-bold';
@@ -237,14 +249,14 @@ export default function RouteResultScreen() {
               <View style={[styles.statDivider, { backgroundColor: theme.separator }]} />
               <View style={styles.statItem}>
                 <ThemedText style={[styles.statValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {formatTime(departureTime)}
+                  {formatClock(departureTime)}
                 </ThemedText>
                 <ThemedText style={[styles.statLabel, { color: theme.textMuted }]}>{t('result.departure')}</ThemedText>
               </View>
               <View style={[styles.statDivider, { backgroundColor: theme.separator }]} />
               <View style={styles.statItem}>
                 <ThemedText style={[styles.statValue, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {formatTime(arrivalTime)}
+                  {formatClock(arrivalTime)}
                 </ThemedText>
                 <ThemedText style={[styles.statLabel, { color: theme.textMuted }]}>{t('result.arrival')}</ThemedText>
               </View>

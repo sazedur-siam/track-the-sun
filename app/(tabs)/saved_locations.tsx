@@ -4,8 +4,15 @@ import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import LanguagePicker from '@/src/components/LanguagePicker';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
-import { deleteFavoriteRoute, FavoriteRoute, getFavoriteRoutes } from '@/src/services/favoritesService';
+import {
+  deleteFavoriteRoute,
+  FavoriteRoute,
+  getFavoriteRoutes,
+  resolveDepartureTime,
+} from '@/src/services/favoritesService';
+import { buildRouteResultParams, putRoute } from '@/src/services/routeStore';
 import { fetchRoute } from '@/src/services/routingService';
+import { formatClock } from '@/src/utils/time';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -57,19 +64,17 @@ export default function SavedLocationsScreen() {
   const handleCalculateRoute = async (favorite: FavoriteRoute) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      const route = await fetchRoute(favorite.fromLocation, favorite.toLocation, new Date());
+      // Use the saved time of day (today), or "now" for routes saved without one.
+      const departureTime = resolveDepartureTime(favorite.departureTime);
+      const route = await fetchRoute(favorite.fromLocation, favorite.toLocation, departureTime);
       if (!route) {
         Alert.alert(t('saved.routeNotFoundTitle'), t('saved.routeNotFoundMsg'));
         return;
       }
+      const routeId = putRoute(route);
       router.push({
         pathname: '/route-result',
-        params: {
-          route: JSON.stringify(route),
-          fromName: favorite.fromLocation.name,
-          toName: favorite.toLocation.name,
-          departureTime: new Date().toISOString(),
-        },
+        params: buildRouteResultParams(routeId, favorite.fromLocation, favorite.toLocation, departureTime),
       });
     } catch {
       Alert.alert(t('common.error'), t('saved.errorMsg'));
@@ -155,6 +160,19 @@ export default function SavedLocationsScreen() {
                   <View style={styles.tapHintRow}>
                     <MaterialCommunityIcons name="white-balance-sunny" size={14} color={theme.primary} />
                     <ThemedText style={[styles.tapHint, { color: theme.primary }]}>{t('saved.tapHint')}</ThemedText>
+                    {favorite.departureTime && (
+                      <>
+                        <MaterialCommunityIcons
+                          name="clock-outline"
+                          size={14}
+                          color={theme.textSecondary}
+                          style={styles.timeIcon}
+                        />
+                        <ThemedText style={[styles.tapHint, { color: theme.textSecondary }]}>
+                          {t('common.departsAt', { time: formatClock(resolveDepartureTime(favorite.departureTime)) })}
+                        </ThemedText>
+                      </>
+                    )}
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -258,6 +276,9 @@ const styles = StyleSheet.create({
   tapHint: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  timeIcon: {
+    marginLeft: Spacing.md,
   },
   deleteButton: {
     justifyContent: 'center',

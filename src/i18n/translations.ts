@@ -20,6 +20,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.cancel': 'Cancel',
     'common.delete': 'Delete',
     'common.error': 'Error',
+    'common.departsAt': 'Departs {time}',
 
     // Navigation
     'nav.home': 'Home',
@@ -181,6 +182,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.cancel': 'বাতিল',
     'common.delete': 'মুছুন',
     'common.error': 'ত্রুটি',
+    'common.departsAt': 'ছাড়ার সময় {time}',
 
     // Navigation
     'nav.home': 'হোম',

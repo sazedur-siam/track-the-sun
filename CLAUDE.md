@@ -1,0 +1,93 @@
+# CLAUDE.md
+
+TrackTheSun is an Expo / React Native app that tells bus riders which side to sit on to avoid (or get) the sun. You enter a route and a departure time. The app gets a driving route from OSRM, works out the sun's position at each point along it with `suncalc`, and recommends a side.
+
+## Commands
+
+```bash
+npm install          # install deps (node_modules is not committed)
+npm start            # Expo dev server (press i / a / w, or scan the QR with Expo Go)
+npm run ios          # iOS simulator
+npm run android      # Android emulator
+npm run web          # browser (react-native-web)
+npm test             # Jest (jest-expo preset); tests live in src/**/__tests__/
+npm run lint         # expo lint (eslint-config-expo)
+npm run typecheck    # tsc --noEmit (strict mode)
+```
+
+Run `npm test && npm run lint && npm run typecheck` before you call a change done. EAS build profiles (`development`, `preview` → APK, `production`) are in `eas.json`.
+
+## Stack
+
+- Expo SDK 54, React Native 0.81, React 19.1, with the New Architecture and React Compiler enabled (`app.json` → `experiments.reactCompiler`)
+- `expo-router` v6 for file-based routing, with typed routes on
+- `react-native-reanimated` v4 plus the RN `Animated` API, `expo-haptics`, `expo-location`
+- `@react-native-async-storage/async-storage` for persistence
+- Free APIs only, with no keys: OSRM `router.project-osrm.org` for routing and Nominatim for geocoding
+
+## Layout
+
+Two folder trees exist side by side:
+
+- `app/` holds the expo-router **routes only**, as thin wrappers.
+  - `_layout.tsx`: root Stack wrapped in `LanguageProvider` and the navigation `ThemeProvider`
+  - `(tabs)/index.tsx`: `LoadingScreen` (1.8 s), then `HomeScreen`
+  - `(tabs)/saved_locations.tsx`: saved routes list. This screen's logic lives in the route file itself.
+  - `route-result.tsx`: header plus `RouteResultScreen`
+- `src/` holds the app code.
+  - `screens/`: `HomeScreen`, `RouteResultScreen`, `LoadingScreen`
+  - `components/`: LocationInput (debounced Nominatim autocomplete), CurrentLocationButton, TimePicker, BusDiagram, FavoritesModal, NameInputModal, LanguagePicker, SunAnimation, AnimatedProgressCircle
+  - `services/`: pure logic with no React
+    - `routingService.ts`: OSRM fetch, polyline decode, distance-weighted waypoint timestamps, bearing, format helpers
+    - `sunCalcService.ts`: `calculateSunExposure()`, the core algorithm
+    - `geocodingService.ts`: Nominatim search and reverse geocoding
+    - `favoritesService.ts`: AsyncStorage CRUD for saved routes. Stores an optional `departureTime` as a local "HH:mm" time of day; `resolveDepartureTime()` turns it into today's date.
+    - `routeStore.ts`: in-memory hand-off of `Route` objects between screens, plus `buildRouteResultParams` / `parseRouteResultParams`
+  - `i18n/`: `LanguageProvider` + `useTranslation()`, and `translations.ts` (EN + BN)
+  - `utils/time.ts`: `formatClock()` (12h clock)
+  - `types.ts`: shared types
+- `docs/features/`: the feature backlog, one spec file per proposed feature
+- The root `components/`, `hooks/` and `constants/` come from the Expo template: themed-text/view, icon-symbol, `use-color-scheme`. `constants/theme.ts` holds the **design tokens** (`Colors`, `Spacing`, `Radius`, `Shadows`).
+- Import alias: `@/*` points to the repo root, e.g. `@/src/services/...` and `@/constants/theme`.
+
+## Core algorithm (sunCalcService)
+
+For each polyline segment, the code does the following:
+
+1. It computes the heading as the bearing to the next point.
+2. It computes the sun azimuth: `suncalc` azimuth converted to compass degrees with `(az*180/π + 180) % 360`.
+3. It takes `relativeAngle = normalize(sunAz - heading)`.
+4. A positive angle means the sun is on the **right**. `|angle| < 30` or `> 150` is neutral (sun ahead or behind). Sun altitude ≤ 0 is also neutral.
+5. Exposure is weighted by **segment distance**. A side is recommended (the side *opposite* the sun) only when it leads by more than `RECOMMENDATION_MARGIN` (10 points).
+
+Waypoint timestamps are interpolated by **cumulative distance**, not by point index, because polyline points are not evenly spaced. Keep that behaviour.
+
+**Navigating to results:** never put the `Route` in URL params, because a full route is hundreds of KB. Call `putRoute(route)` and pass `buildRouteResultParams(routeId, from, to, departureTime)`. `RouteResultScreen` reads the route with `getRoute(routeId)`. If the route isn't in memory (web refresh, deep link, app restart), it **fetches it again** from the from/to/time params. That is also why a result URL works as a shareable link.
+
+## Conventions
+
+- **Styling:** always use the tokens from `@/constants/theme`. Get colors with `const theme = Colors[useColorScheme() ?? 'light']`. Do not hardcode colors, and support both light and dark mode.
+- **i18n:** every user-visible string goes through `t('namespace.key', params)`. Add each key to **both** `en` and `bn` in `translations.ts`, with flat dot-namespaced keys and `{param}` placeholders. `en` is the fallback. Services return structured data; the UI builds the localized sentences (see the summary in `RouteResultScreen`).
+- **Accessibility:** touchables get `accessibilityRole` and a translated `accessibilityLabel`.
+- **Haptics:** use `Haptics` on primary actions, matching the existing patterns.
+- **Files:** components are PascalCase in `src/`. Template files in the root folders are kebab-case.
+- **Services:** network failures in services are caught and return `null` or `[]`. Screens show an `Alert`.
+
+## Testing
+
+- Tests use Jest with `jest-expo`. `jest.setup.js` installs the official AsyncStorage mock.
+- Keep service logic pure, and test it in `src/services/__tests__/`. Sun tests use synthetic straight routes in Dhaka on the December solstice, where the sun is reliably in the south.
+- `src/i18n/__tests__/translations.test.ts` fails if `en` and `bn` have different keys or `{placeholders}`.
+- New fields on stored data (e.g. `FavoriteRoute`) must be **optional**, with a test that reads legacy data.
+
+## Known gaps / gotchas
+
+- `react-native-maps` is installed but not used yet (see `docs/features/01-route-map.md`). It doesn't support web.
+- `SunAvoidance` ("avoid" | "seek") in `src/types.ts` is unused (see `docs/features/04-seek-sun-mode.md`).
+- The Nominatim usage policy limits requests to 1 per second and asks for a meaningful User-Agent. Search is debounced in `LocationInput`.
+- The public OSRM server only serves the driving profile.
+- Deleting a route file while `expo start` is running can crash the Metro watcher. Restart it.
+
+## Git
+
+Use the personal GitHub account **sazedur-siam** for this repo. The remote is `github.com/sazedur-siam/track-the-sun`, and the repo-local `user.name`/`user.email` are already set to it. Do not add Claude attribution to commits or PRs.
