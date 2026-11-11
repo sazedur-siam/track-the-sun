@@ -194,6 +194,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'timeline.neutral': 'No side sun',
     'timeline.a11y': 'Timeline of which side the sun is on during the trip',
 
+    // Map
+    'map.title': 'Route map',
+    'map.expand': 'Expand map',
+    'map.close': 'Close map',
+    'map.start': 'Start',
+    'map.end': 'Destination',
+
     // Best time to leave
     'best.title': 'Best time to leave',
     'best.shadiest': 'Least sun: leave between {start} and {end}',
@@ -432,6 +439,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'timeline.right': 'রোদ ডান দিকে',
     'timeline.neutral': 'পাশে রোদ নেই',
     'timeline.a11y': 'যাত্রার সময় রোদ কোন দিকে থাকবে তার সময়রেখা',
+
+    // Map
+    'map.title': 'রুটের মানচিত্র',
+    'map.expand': 'মানচিত্র বড় করুন',
+    'map.close': 'মানচিত্র বন্ধ করুন',
+    'map.start': 'শুরু',
+    'map.end': 'গন্তব্য',
 
     // Best time to leave
     'best.title': 'রওনা দেওয়ার সেরা সময়',

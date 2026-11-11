@@ -98,7 +98,9 @@ Waypoint timestamps are interpolated by **cumulative distance**, not by point in
 
 ## Known gaps / gotchas
 
-- `react-native-maps` is installed but not used yet (see `docs/features/01-route-map.md`). It doesn't support web.
+- **Maps:** `src/components/RouteMap.tsx` uses react-native-maps (Apple Maps on iOS; Google Maps on Android, which needs a key with "Maps SDK for Android". `app.config.js` injects `GOOGLE_MAPS_ANDROID_API_KEY`, falling back to `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`. Expo Go has its own key). `RouteMap.web.tsx` uses Leaflet with OpenStreetMap tiles, **lazy-imported** inside an effect because Leaflet touches `window` and would break static web rendering. OSM's public tiles are fine for light use only; switch to a tile provider before heavy web traffic.
+- Keep `react-native-maps` at the version `npx expo install` picks (1.20.1 for SDK 54), so it matches Expo Go.
+- Don't start the dev server with `CI=1`: Expo turns off file watching in CI mode, and edits won't show up.
 - The Nominatim usage policy limits requests to 1 per second and asks for a meaningful User-Agent. Search is debounced in `LocationInput`.
 - The public OSRM server only serves the driving profile.
 - Google rejects departure times in the past. `requestGoogleRoute` then switches to `TRAFFIC_UNAWARE`. Traffic-aware requests are billed at a higher Google tier than traffic-unaware ones.

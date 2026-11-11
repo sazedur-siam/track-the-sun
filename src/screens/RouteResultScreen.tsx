@@ -5,6 +5,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import BusDiagram from '@/src/components/BusDiagram';
 import DepartureChart from '@/src/components/DepartureChart';
 import ExposureTimeline from '@/src/components/ExposureTimeline';
+import RouteMapCard from '@/src/components/RouteMapCard';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { bestWindow, scanDepartures, shiftRoute } from '@/src/services/departurePlanner';
@@ -13,6 +14,7 @@ import { formatDistance, formatDuration, Route } from '@/src/services/routingSer
 import { planRoute } from '@/src/services/settingsService';
 import { calculateSunExposure } from '@/src/services/sunCalcService';
 import { buildTimeline } from '@/src/services/timeline';
+import { buildSideSegments } from '@/src/utils/geometry';
 import { formatClock } from '@/src/utils/time';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -78,6 +80,11 @@ export default function RouteResultScreen() {
   const sunData = useMemo(
     () => (route?.waypoints ? calculateSunExposure(route.waypoints, mode) : null),
     [route, mode]
+  );
+
+  const mapSegments = useMemo(
+    () => (route && sunData ? buildSideSegments(route.waypoints, sunData.waypointDetails) : []),
+    [route, sunData]
   );
 
   const timeline = useMemo(() => (sunData ? buildTimeline(sunData.waypointDetails) : []), [sunData]);
@@ -247,6 +254,18 @@ export default function RouteResultScreen() {
                 {summary}
               </ThemedText>
             </View>
+          )}
+
+          {/* Route map, coloured by sun side */}
+          {mapSegments.length > 0 && (
+            <RouteMapCard
+              segments={mapSegments}
+              start={{ latitude: route.waypoints[0].lat, longitude: route.waypoints[0].lng }}
+              end={{
+                latitude: route.waypoints[route.waypoints.length - 1].lat,
+                longitude: route.waypoints[route.waypoints.length - 1].lng,
+              }}
+            />
           )}
 
           {/* Sun on each side */}
