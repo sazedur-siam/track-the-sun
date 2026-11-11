@@ -59,7 +59,7 @@ Two folder trees exist side by side:
   - `i18n/`: `LanguageProvider` + `useTranslation()`, and `translations.ts` (EN + BN)
   - `utils/time.ts`: `formatClock()` (12h clock)
   - `types.ts`: shared types
-- `docs/features/`: the feature backlog, one spec file per proposed feature
+- `docs/features/`: the feature backlog, one spec file per proposed feature. **Delete a feature's file in the commit that ships it**, and list it under "Shipped" in `docs/features/README.md`.
 - The root `components/`, `hooks/` and `constants/` come from the Expo template: themed-text/view, icon-symbol, `use-color-scheme`. `constants/theme.ts` holds the **design tokens** (`Colors`, `Spacing`, `Radius`, `Shadows`).
 - Import alias: `@/*` points to the repo root, e.g. `@/src/services/...` and `@/constants/theme`.
 
@@ -99,7 +99,6 @@ Waypoint timestamps are interpolated by **cumulative distance**, not by point in
 ## Known gaps / gotchas
 
 - `react-native-maps` is installed but not used yet (see `docs/features/01-route-map.md`). It doesn't support web.
-- `SunAvoidance` ("avoid" | "seek") in `src/types.ts` is unused (see `docs/features/04-seek-sun-mode.md`).
 - The Nominatim usage policy limits requests to 1 per second and asks for a meaningful User-Agent. Search is debounced in `LocationInput`.
 - The public OSRM server only serves the driving profile.
 - Google rejects departure times in the past. `requestGoogleRoute` then switches to `TRAFFIC_UNAWARE`. Traffic-aware requests are billed at a higher Google tier than traffic-unaware ones.
