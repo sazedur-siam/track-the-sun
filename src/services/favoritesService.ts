@@ -53,7 +53,8 @@ export async function saveFavoriteRoute(
   try {
     const favorites = await getFavoriteRoutes();
     const newFavorite: FavoriteRoute = {
-      id: Date.now().toString(),
+      // Timestamp + random suffix: saves in the same millisecond must not collide.
+      id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
       fromLocation,
       toLocation,
       name: name || `${fromLocation.name} → ${toLocation.name}`,

@@ -58,6 +58,19 @@ describe('favorites storage', () => {
     expect(await getFavoriteRoutes()).toEqual([]);
   });
 
+  it('gives routes saved at the same moment different ids', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+    await saveFavoriteRoute(FROM, TO, 'One');
+    await saveFavoriteRoute(FROM, TO, 'Two');
+    jest.restoreAllMocks();
+
+    const [one, two] = await getFavoriteRoutes();
+    expect(one.id).not.toBe(two.id);
+
+    await deleteFavoriteRoute(one.id);
+    expect((await getFavoriteRoutes()).map((f) => f.name)).toEqual(['Two']);
+  });
+
   it('defaults the name to "from → to"', async () => {
     await saveFavoriteRoute(FROM, TO);
     const [saved] = await getFavoriteRoutes();
