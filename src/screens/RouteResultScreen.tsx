@@ -139,7 +139,7 @@ export default function RouteResultScreen() {
   if (!sunData.hasDirectSunlight) {
     summary = t('result.summaryNoSun');
   } else if (!recommends) {
-    summary = t('result.summaryBalanced');
+    summary = t(sunData.neutralReason === 'overhead' ? 'result.summaryOverhead' : 'result.summaryBalanced');
   } else {
     const sunSide = sunData.recommendation === 'left' ? 'right' : 'left';
     const percent = sunSide === 'left' ? sunData.leftPercentage : sunData.rightPercentage;
@@ -233,6 +233,28 @@ export default function RouteResultScreen() {
                 sunnySide={sunData.sunnySide}
                 sunnySideCompass={sunData.sunnySideCompass}
               />
+
+              {sunData.sunnySideStrength && sunData.sunnySide !== 'neutral' && (
+                <View style={[styles.insightRow, { backgroundColor: theme.inputBackground }]}>
+                  <MaterialCommunityIcons name="white-balance-sunny" size={18} color={theme.primary} />
+                  <ThemedText style={[styles.insightText, { color: theme.text }]}>
+                    {t(`result.strength.${sunData.sunnySideStrength}`, { side: t(`side.${sunData.sunnySide}`) })}
+                  </ThemedText>
+                </View>
+              )}
+
+              {sunData.glare && (
+                <View style={[styles.insightRow, { backgroundColor: theme.accentSoft }]}>
+                  <MaterialCommunityIcons name="weather-sunny-alert" size={18} color={theme.warning} />
+                  <ThemedText style={[styles.insightText, { color: theme.text }]}>
+                    {t('result.glare', {
+                      side: t(`side.${sunData.glare.side}`),
+                      start: formatClock(sunData.glare.start),
+                      end: formatClock(sunData.glare.end),
+                    })}
+                  </ThemedText>
+                </View>
+              )}
             </View>
           )}
 
@@ -337,6 +359,19 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.xl,
     paddingBottom: Spacing.xxl + Spacing.lg,
+  },
+  insightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    marginTop: Spacing.md,
+  },
+  insightText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
   },
   fallbackBanner: {
     flexDirection: 'row',

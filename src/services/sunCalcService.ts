@@ -24,6 +24,22 @@ const MIN_SUN_ALTITUDE = 0;
 /** Margin (percentage points) one side must lead by to earn a recommendation. */
 const RECOMMENDATION_MARGIN = 10;
 
+/** Below this sun altitude (degrees), side sun counts as glare. */
+const GLARE_MAX_ALTITUDE = 15;
+
+/** Minimum side factor (|sin| of the sun's angle to travel) for glare. */
+const GLARE_MIN_SIDE_FACTOR = 0.7;
+
+/** How hard the sun hits the sunny side, from its average intensity there. */
+export type SunStrength = "strong" | "moderate" | "mild";
+
+/** A stretch of low, side-on sun (glare) during the trip. */
+export interface GlareWindow {
+  side: "left" | "right";
+  start: Date;
+  end: Date;
+}
+
 export interface WaypointSunData {
   waypoint: RouteWaypoint;
   sunAzimuth: number;
@@ -33,6 +49,15 @@ export interface WaypointSunData {
   side: Side;
   sunAltitude: number;
   distance: number;
+  /** When the vehicle reaches the end of this segment. */
+  endTimestamp: Date;
+  /**
+   * How much sun comes through a side window on this segment, 0–1:
+   * |sin(angle to travel)| × cos(sun altitude). 1 = low sun exactly side-on.
+   */
+  intensity: number;
+  /** Low, side-on sun on this segment. */
+  glare: boolean;
 }
 
 export interface SunExposureResult {
@@ -40,6 +65,21 @@ export interface SunExposureResult {
   leftPercentage: number;
   /** Share of the journey (by distance) with sun on the right of travel. */
   rightPercentage: number;
+  /**
+   * Sun intensity on each side (0–100), weighted by sun height and angle:
+   * 100 = low sun exactly side-on for the whole trip. Drives the recommendation.
+   */
+  leftIntensity: number;
+  rightIntensity: number;
+  /** How strong the sun is on the sunny side, or null with no sunny side. */
+  sunnySideStrength: SunStrength | null;
+  /** Longest stretch of low, side-on sun, if any. */
+  glare: GlareWindow | null;
+  /**
+   * Why there is no recommendation despite sunlight: the sides are evenly
+   * lit ("balanced"), or the sun is mostly overhead ("overhead").
+   */
+  neutralReason: "balanced" | "overhead" | null;
   /** Side the rider should SIT on to avoid the sun (opposite the sunny side). */
   recommendation: Side;
   /** Side the sun is predominantly on during the journey. */
@@ -176,6 +216,11 @@ export function calculateSunExposure(
     return {
       leftPercentage: 0,
       rightPercentage: 0,
+      leftIntensity: 0,
+      rightIntensity: 0,
+      sunnySideStrength: null,
+      glare: null,
+      neutralReason: null,
       recommendation: "neutral",
       sunnySide: "neutral",
       sunnySideCompass: null,
@@ -190,6 +235,10 @@ export function calculateSunExposure(
   let totalRightDistance = 0;
   let totalNeutralDistance = 0;
   let hasSunlight = false;
+
+  // Intensity-weighted exposure (distance × intensity) per side.
+  let leftExposure = 0;
+  let rightExposure = 0;
 
   // Circular accumulators (weighted by distance) for the sun azimuth on each
   // side, so we can report the compass direction the sunny side faces.
@@ -234,6 +283,16 @@ export function calculateSunExposure(
     // Determine which side
     const side = isSunUp ? determineSide(relativeAngle) : "neutral";
 
+    // How much of the sun actually comes through a side window
+    const signedSide = Math.sin((relativeAngle * Math.PI) / 180); // + right, − left
+    const sideFactor = Math.abs(signedSide);
+    const heightFactor = isSunUp ? Math.cos((sunAltitude * Math.PI) / 180) : 0;
+    const intensity = sideFactor * heightFactor;
+    const glare =
+      isSunUp &&
+      sunAltitude < GLARE_MAX_ALTITUDE &&
+      sideFactor > GLARE_MIN_SIDE_FACTOR;
+
     // Calculate segment distance
     const distance = calculateDistance(
       current.lat,
@@ -241,6 +300,9 @@ export function calculateSunExposure(
       next.lat,
       next.lng,
     );
+
+    if (signedSide > 0) rightExposure += distance * intensity;
+    else leftExposure += distance * intensity;
 
     // Add to totals and accumulate the sun direction for the relevant side
     const azimuthRad = (sunAzimuth * Math.PI) / 180;
@@ -264,6 +326,9 @@ export function calculateSunExposure(
       side,
       sunAltitude,
       distance,
+      endTimestamp: next.timestamp,
+      intensity,
+      glare,
     });
   }
 
@@ -279,38 +344,55 @@ export function calculateSunExposure(
       ? Math.round((totalRightDistance / totalDistance) * 100)
       : 0;
 
-  // Which side is sunnier, and the compass direction that side faces
+  const leftIntensity =
+    totalDistance > 0 ? Math.round((leftExposure / totalDistance) * 100) : 0;
+  const rightIntensity =
+    totalDistance > 0 ? Math.round((rightExposure / totalDistance) * 100) : 0;
+
+  // Which side is sunnier (by intensity), and the compass direction it faces
   let sunnySide: Side = "neutral";
   let sunnySideCompass: Compass | null = null;
-  if (hasSunlight && totalLeftDistance !== totalRightDistance) {
-    if (totalLeftDistance > totalRightDistance) {
-      sunnySide = "left";
-      sunnySideCompass = azimuthToCompass(
-        (Math.atan2(leftSin, leftCos) * 180) / Math.PI,
-      );
-    } else {
-      sunnySide = "right";
-      sunnySideCompass = azimuthToCompass(
-        (Math.atan2(rightSin, rightCos) * 180) / Math.PI,
-      );
+  if (hasSunlight && leftExposure !== rightExposure) {
+    sunnySide = leftExposure > rightExposure ? "left" : "right";
+    const [sin, cos] =
+      sunnySide === "left" ? [leftSin, leftCos] : [rightSin, rightCos];
+    if (sin !== 0 || cos !== 0) {
+      sunnySideCompass = azimuthToCompass((Math.atan2(sin, cos) * 180) / Math.PI);
     }
   }
 
-  // Determine recommendation (sit on opposite side to avoid sun)
+  // Recommendation (sit on the opposite side to avoid sun)
   let recommendation: Side = "neutral";
   if (hasSunlight) {
-    if (rightPercentage > leftPercentage + RECOMMENDATION_MARGIN) {
+    if (rightIntensity > leftIntensity + RECOMMENDATION_MARGIN) {
       recommendation = "left"; // Sit on the left to avoid sun on the right
-    } else if (leftPercentage > rightPercentage + RECOMMENDATION_MARGIN) {
+    } else if (leftIntensity > rightIntensity + RECOMMENDATION_MARGIN) {
       recommendation = "right"; // Sit on the right to avoid sun on the left
     }
   }
+
+  // Why no recommendation: one side IS sunnier by distance, but the sun is
+  // mostly high overhead, so little of it comes through the side windows.
+  let neutralReason: SunExposureResult["neutralReason"] = null;
+  if (hasSunlight && recommendation === "neutral") {
+    neutralReason =
+      Math.abs(leftPercentage - rightPercentage) > RECOMMENDATION_MARGIN
+        ? "overhead"
+        : "balanced";
+  }
+
+  const sunnySideStrength =
+    sunnySide === "neutral" ? null : strengthOf(details, sunnySide);
+  const glare = longestGlare(details);
 
   // Generate summary
   let summary = "";
   if (!hasSunlight) {
     summary =
       "No direct sunlight during this journey (nighttime or low sun angle)";
+  } else if (neutralReason === "overhead") {
+    summary =
+      "The sun is mostly high overhead, so little comes through the side windows - either side is fine";
   } else if (recommendation === "neutral") {
     summary = "Sun exposure is balanced - either side is fine";
   } else {
@@ -326,6 +408,11 @@ export function calculateSunExposure(
   return {
     leftPercentage,
     rightPercentage,
+    leftIntensity,
+    rightIntensity,
+    sunnySideStrength,
+    glare,
+    neutralReason,
     recommendation,
     sunnySide,
     sunnySideCompass,
@@ -333,4 +420,45 @@ export function calculateSunExposure(
     waypointDetails: details,
     summary,
   };
+}
+
+/**
+ * Average intensity on one side over the segments where the sun is on that
+ * side, bucketed: strong ≥ 0.6, moderate ≥ 0.35, otherwise mild.
+ */
+function strengthOf(details: WaypointSunData[], side: Side): SunStrength | null {
+  let weighted = 0;
+  let distance = 0;
+  for (const d of details) {
+    if (d.side !== side) continue;
+    weighted += d.intensity * d.distance;
+    distance += d.distance;
+  }
+  if (distance === 0) return null;
+  const average = weighted / distance;
+  if (average >= 0.6) return "strong";
+  if (average >= 0.35) return "moderate";
+  return "mild";
+}
+
+/** Longest run of consecutive glare segments on the same side. */
+function longestGlare(details: WaypointSunData[]): GlareWindow | null {
+  let best: GlareWindow | null = null;
+  let current: GlareWindow | null = null;
+  const length = (w: GlareWindow) => w.end.getTime() - w.start.getTime();
+
+  for (const d of details) {
+    const side = d.side === "left" || d.side === "right" ? d.side : null;
+    if (d.glare && side) {
+      if (current && current.side === side) {
+        current.end = d.endTimestamp;
+      } else {
+        current = { side, start: d.waypoint.timestamp, end: d.endTimestamp };
+      }
+      if (!best || length(current) > length(best)) best = { ...current };
+    } else {
+      current = null;
+    }
+  }
+  return best;
 }

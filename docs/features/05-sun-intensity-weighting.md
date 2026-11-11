@@ -1,6 +1,8 @@
 # 05 · Glare-aware weighting by sun height
 
-**Status:** Proposed · **Value:** High (accuracy) · **Effort:** M
+**Status:** Shipped (weather layer not included) · **Value:** High (accuracy) · **Effort:** M
+
+> **As built:** the displayed percentages stay as *share of the trip by distance*, because riders find those easy to read. The **recommendation** uses the intensity-weighted shares (`leftIntensity` / `rightIntensity`). The result screen also shows the sun's strength on the sunny side (strong / moderate / mild) and the longest low-sun glare window. If one side is sunnier by distance but the sun is mostly overhead, the result is neutral with `neutralReason: "overhead"`.
 
 ## Summary
 

@@ -112,3 +112,71 @@ describe('calculateSunExposure', () => {
     expect(result.recommendation).toBe('neutral');
   });
 });
+
+describe('sun-height weighting (glare-aware)', () => {
+  // ~6:55 local in Dhaka in December: the sun is just up, low in the east-southeast.
+  const EARLY_MORNING = new Date('2026-12-21T00:55:00Z');
+
+  it('treats low side-on sun as strong, with a glare window', () => {
+    // Northbound: the low eastern sun is on the right.
+    const route = straightRoute(DHAKA, 0.02, 0, 10, EARLY_MORNING, 20);
+    const result = calculateSunExposure(route);
+
+    expect(result.recommendation).toBe('left');
+    expect(result.rightIntensity).toBeGreaterThan(70);
+    expect(result.sunnySideStrength).toBe('strong');
+    expect(result.glare).not.toBeNull();
+    expect(result.glare!.side).toBe('right');
+    expect(result.glare!.end.getTime()).toBeGreaterThan(result.glare!.start.getTime());
+  });
+
+  it('weights the midday sun less than low sun on the same heading', () => {
+    const low = calculateSunExposure(straightRoute(DHAKA, 0.02, 0, 10, EARLY_MORNING, 20));
+    // Eastbound at 11:45 puts the ~43° high southern sun exactly side-on.
+    const midday = calculateSunExposure(straightRoute(DHAKA, 0, 0.02, 10, LATE_MORNING));
+
+    expect(midday.rightIntensity).toBeLessThan(low.rightIntensity);
+    expect(midday.rightIntensity).toBeGreaterThan(60); // cos(43°) ≈ 0.73
+    expect(midday.rightIntensity).toBeLessThan(80);
+    expect(midday.glare).toBeNull();
+  });
+
+  it('gives no recommendation when the sun is almost overhead', () => {
+    // Equator at the March equinox, a few minutes before solar noon: the sun
+    // is ~86° high and due east, so it is on the right of a northbound bus
+    // for the whole trip — but barely reaches the side windows.
+    const start = { lat: 0, lng: 0 };
+    const route = straightRoute(start, 0.01, 0, 5, new Date('2026-03-20T11:52:00Z'), 5);
+    const result = calculateSunExposure(route);
+
+    expect(result.hasDirectSunlight).toBe(true);
+    expect(result.rightPercentage).toBeGreaterThan(90);
+    expect(result.rightIntensity).toBeLessThan(10);
+    expect(result.recommendation).toBe('neutral');
+    expect(result.neutralReason).toBe('overhead');
+    expect(result.sunnySideStrength).toBe('mild');
+  });
+
+  it('reports "balanced" when both sides get similar sun', () => {
+    const east = straightRoute(DHAKA, 0, 0.02, 5, LATE_MORNING, 15);
+    const turn = east[east.length - 1];
+    const west = straightRoute(turn, 0, -0.02, 5, turn.timestamp, 15).slice(1);
+    expect(calculateSunExposure([...east, ...west]).neutralReason).toBe('balanced');
+  });
+
+  it('has no neutral reason, strength or glare at night', () => {
+    const result = calculateSunExposure(straightRoute(DHAKA, 0, 0.02, 10, MIDNIGHT));
+    expect(result.neutralReason).toBeNull();
+    expect(result.sunnySideStrength).toBeNull();
+    expect(result.glare).toBeNull();
+    expect(result.leftIntensity + result.rightIntensity).toBe(0);
+  });
+
+  it('keeps every segment intensity between 0 and 1', () => {
+    const { waypointDetails } = calculateSunExposure(straightRoute(DHAKA, 0.01, 0.01, 10, LATE_MORNING));
+    waypointDetails.forEach((d) => {
+      expect(d.intensity).toBeGreaterThanOrEqual(0);
+      expect(d.intensity).toBeLessThanOrEqual(1);
+    });
+  });
+});

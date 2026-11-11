@@ -71,7 +71,9 @@ For each polyline segment, the code does the following:
 2. It computes the sun azimuth: `suncalc` azimuth converted to compass degrees with `(az*180/π + 180) % 360`.
 3. It takes `relativeAngle = normalize(sunAz - heading)`.
 4. A positive angle means the sun is on the **right**. `|angle| < 30` or `> 150` is neutral (sun ahead or behind). Sun altitude ≤ 0 is also neutral.
-5. Exposure is weighted by **segment distance**. A side is recommended (the side *opposite* the sun) only when it leads by more than `RECOMMENDATION_MARGIN` (10 points).
+5. `leftPercentage` / `rightPercentage` are **distance shares**. They are shown to the user.
+6. Each segment also gets an **intensity**: `|sin(relativeAngle)| × cos(sunAltitude)`, from 0 to 1. Low sun from the side is 1, overhead sun is close to 0. `leftIntensity` / `rightIntensity` are distance-weighted intensity shares and **drive the recommendation**: the side *opposite* the sun is recommended only when it leads by more than `RECOMMENDATION_MARGIN` (10 points).
+7. Extras: `sunnySideStrength` (strong ≥ 0.6, moderate ≥ 0.35, otherwise mild), `glare` (the longest run with altitude < 15° and side factor > 0.7), and `neutralReason` (`balanced` | `overhead`).
 
 Waypoint timestamps are interpolated by **cumulative distance**, not by point index, because polyline points are not evenly spaced. Keep that behaviour.
 

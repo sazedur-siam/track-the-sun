@@ -93,6 +93,12 @@ export const translations: Record<Language, Record<string, string>> = {
     'result.summaryNoSun':
       'No direct sunlight during this journey (nighttime or low sun angle).',
     'result.summaryBalanced': 'Sun exposure is balanced — either side is fine.',
+    'result.summaryOverhead':
+      'The sun is mostly high overhead, so little comes through the side windows. Either side is fine.',
+    'result.strength.strong': 'Strong sun on the {side}: low and from the side.',
+    'result.strength.moderate': 'Moderate sun on the {side}.',
+    'result.strength.mild': 'Mild sun on the {side}: it is mostly high overhead.',
+    'result.glare': 'Low-sun glare on the {side}, {start}–{end}.',
     'result.summaryRecommend':
       'Sit on the {sit} side — the sun is mostly on your {sun} (facing {facing}) for {percent}% of the trip.',
     'result.summaryRecommendNoFacing':
@@ -299,6 +305,12 @@ export const translations: Record<Language, Record<string, string>> = {
     'result.goBack': 'ফিরে যান',
     'result.summaryNoSun': 'এই যাত্রায় সরাসরি সূর্যালোক নেই (রাত বা সূর্যের নিচু কোণ)।',
     'result.summaryBalanced': 'সূর্যালোক উভয় দিকে সমান — যেকোনো দিকেই ঠিক আছে।',
+    'result.summaryOverhead':
+      'সূর্য বেশিরভাগ সময় মাথার উপরে, তাই পাশের জানালা দিয়ে কম রোদ আসে। যেকোনো দিকে বসতে পারেন।',
+    'result.strength.strong': '{side} দিকে তীব্র রোদ: নিচু ও পাশ থেকে।',
+    'result.strength.moderate': '{side} দিকে মাঝারি রোদ।',
+    'result.strength.mild': '{side} দিকে হালকা রোদ: সূর্য বেশিরভাগ সময় মাথার উপরে।',
+    'result.glare': '{side} দিকে নিচু সূর্যের ঝলক, {start}–{end}।',
     'result.summaryRecommend':
       '{sit} দিকে বসুন — যাত্রার {percent}% সময় সূর্য মূলত আপনার {sun} দিকে ({facing} মুখী) থাকে।',
     'result.summaryRecommendNoFacing':
