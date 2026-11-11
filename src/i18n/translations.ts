@@ -187,6 +187,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'units.hour': 'h',
     'units.min': 'm',
 
+    // Timeline
+    'timeline.title': 'Sun along the way',
+    'timeline.left': 'Sun on the left',
+    'timeline.right': 'Sun on the right',
+    'timeline.neutral': 'No side sun',
+    'timeline.a11y': 'Timeline of which side the sun is on during the trip',
+
     // Settings
     'nav.settings': 'Settings',
     'settings.title': 'Settings',
@@ -404,6 +411,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'units.m': 'মি',
     'units.hour': 'ঘ',
     'units.min': 'মিন',
+
+    // Timeline
+    'timeline.title': 'পথে রোদ কোন দিকে',
+    'timeline.left': 'রোদ বাঁ দিকে',
+    'timeline.right': 'রোদ ডান দিকে',
+    'timeline.neutral': 'পাশে রোদ নেই',
+    'timeline.a11y': 'যাত্রার সময় রোদ কোন দিকে থাকবে তার সময়রেখা',
 
     // Settings
     'nav.settings': 'সেটিংস',

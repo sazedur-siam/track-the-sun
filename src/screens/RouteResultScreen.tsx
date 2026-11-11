@@ -3,12 +3,14 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import BusDiagram from '@/src/components/BusDiagram';
+import ExposureTimeline from '@/src/components/ExposureTimeline';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { getRoute, parseRouteResultParams, RouteResultParams } from '@/src/services/routeStore';
 import { formatDistance, formatDuration, Route } from '@/src/services/routingService';
 import { planRoute } from '@/src/services/settingsService';
 import { calculateSunExposure } from '@/src/services/sunCalcService';
+import { buildTimeline } from '@/src/services/timeline';
 import { formatClock } from '@/src/utils/time';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -75,6 +77,8 @@ export default function RouteResultScreen() {
     () => (route?.waypoints ? calculateSunExposure(route.waypoints, mode) : null),
     [route, mode]
   );
+
+  const timeline = useMemo(() => (sunData ? buildTimeline(sunData.waypointDetails) : []), [sunData]);
 
   useEffect(() => {
     if (!sunData) return;
@@ -265,6 +269,16 @@ export default function RouteResultScreen() {
                   </ThemedText>
                 </View>
               )}
+            </View>
+          )}
+
+          {/* Sun along the way (hidden for night or very short trips) */}
+          {sunData.hasDirectSunlight && route.duration >= 300 && timeline.length > 0 && (
+            <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }, Shadows.sm]}>
+              <ThemedText type="subtitle" style={styles.cardTitle}>
+                {t('timeline.title')}
+              </ThemedText>
+              <ExposureTimeline runs={timeline} />
             </View>
           )}
 
