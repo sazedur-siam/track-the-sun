@@ -6,6 +6,7 @@ import BusDiagram from '@/src/components/BusDiagram';
 import DepartureChart from '@/src/components/DepartureChart';
 import ExposureTimeline from '@/src/components/ExposureTimeline';
 import RouteMapCard from '@/src/components/RouteMapCard';
+import SafeBoundary from '@/src/components/SafeBoundary';
 import { useTranslation } from '@/src/i18n/LanguageProvider';
 import { saveFavoriteRoute } from '@/src/services/favoritesService';
 import { bestWindow, scanDepartures, shiftRoute } from '@/src/services/departurePlanner';
@@ -317,14 +318,16 @@ export default function RouteResultScreen() {
 
           {/* Route map, coloured by sun side */}
           {mapSegments.length > 0 && (
-            <RouteMapCard
-              segments={mapSegments}
-              start={{ latitude: route.waypoints[0].lat, longitude: route.waypoints[0].lng }}
-              end={{
-                latitude: route.waypoints[route.waypoints.length - 1].lat,
-                longitude: route.waypoints[route.waypoints.length - 1].lng,
-              }}
-            />
+            <SafeBoundary name="map">
+              <RouteMapCard
+                segments={mapSegments}
+                start={{ latitude: route.waypoints[0].lat, longitude: route.waypoints[0].lng }}
+                end={{
+                  latitude: route.waypoints[route.waypoints.length - 1].lat,
+                  longitude: route.waypoints[route.waypoints.length - 1].lng,
+                }}
+              />
+            </SafeBoundary>
           )}
 
           {/* Sun on each side */}
@@ -372,7 +375,9 @@ export default function RouteResultScreen() {
               <ThemedText type="subtitle" style={styles.cardTitle}>
                 {t('timeline.title')}
               </ThemedText>
-              <ExposureTimeline runs={timeline} />
+              <SafeBoundary name="timeline">
+                <ExposureTimeline runs={timeline} />
+              </SafeBoundary>
             </View>
           )}
 
@@ -382,13 +387,15 @@ export default function RouteResultScreen() {
               <ThemedText type="subtitle" style={styles.cardTitle}>
                 {t('best.title')}
               </ThemedText>
-              <DepartureChart
-                slots={slots}
-                best={best}
-                current={departureTime}
-                mode={mode}
-                onSelect={handleSelectDeparture}
-              />
+              <SafeBoundary name="best-time">
+                <DepartureChart
+                  slots={slots}
+                  best={best}
+                  current={departureTime}
+                  mode={mode}
+                  onSelect={handleSelectDeparture}
+                />
+              </SafeBoundary>
             </View>
           )}
 

@@ -23,10 +23,13 @@ export default function RouteMap({ segments, start, end, interactive = false, st
 
   // Start roughly framed (no flash at 0,0), then fit precisely once ready.
   const initialRegion = useMemo<Region>(() => {
-    const lats = coordinates.map((c) => c.latitude);
-    const lngs = coordinates.map((c) => c.longitude);
-    const [minLat, maxLat] = [Math.min(...lats, start.latitude), Math.max(...lats, start.latitude)];
-    const [minLng, maxLng] = [Math.min(...lngs, start.longitude), Math.max(...lngs, start.longitude)];
+    let [minLat, maxLat, minLng, maxLng] = [start.latitude, start.latitude, start.longitude, start.longitude];
+    for (const c of coordinates) {
+      minLat = Math.min(minLat, c.latitude);
+      maxLat = Math.max(maxLat, c.latitude);
+      minLng = Math.min(minLng, c.longitude);
+      maxLng = Math.max(maxLng, c.longitude);
+    }
     return {
       latitude: (minLat + maxLat) / 2,
       longitude: (minLng + maxLng) / 2,

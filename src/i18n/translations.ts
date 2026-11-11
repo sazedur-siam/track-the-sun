@@ -213,6 +213,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'map.close': 'Close map',
     'map.start': 'Start',
     'map.end': 'Destination',
+    'map.unavailable': "The map isn't available in this version of the app.",
+    'map.openGoogleMaps': 'Open route in Google Maps',
 
     // Best time to leave
     'best.title': 'Best time to leave',
@@ -483,6 +485,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'map.close': 'মানচিত্র বন্ধ করুন',
     'map.start': 'শুরু',
     'map.end': 'গন্তব্য',
+    'map.unavailable': 'অ্যাপের এই সংস্করণে মানচিত্র দেখা যাচ্ছে না।',
+    'map.openGoogleMaps': 'Google Maps-এ রুট খুলুন',
 
     // Best time to leave
     'best.title': 'রওনা দেওয়ার সেরা সময়',
